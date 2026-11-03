@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_telegram">Telegram</string>
+
+    <!-- Service -->
+    <string name="tg_service_channel">Telegram direct links</string>
+    <string name="tg_service_title">Telegram direct links active</string>
+    <string name="tg_service_stop">Stop</string>
+    <plurals name="tg_service_text">
+        <item quantity="one">%d link is being served from this device</item>
+        <item quantity="other">%d links are being served from this device</item>
+    </plurals>
+
+    <!-- Login -->
+    <string name="tg_login_title">Sign in to Telegram</string>
+    <string name="tg_login_body">Use your own Telegram account. Your session stays encrypted on this device — no server of ours is involved.</string>
+    <string name="tg_phone_label">Phone number</string>
+    <string name="tg_phone_hint">+15551234567</string>
+    <string name="tg_continue">Continue</string>
+    <string name="tg_api_title">Telegram API credentials</string>
+    <string name="tg_api_body">Create a free API id and hash at my.telegram.org → API development tools. They identify this app to Telegram and are stored encrypted.</string>
+    <string name="tg_api_id_label">API id</string>
+    <string name="tg_api_hash_label">API hash</string>
+    <string name="tg_api_save">Save credentials</string>
+    <string name="tg_api_open_site">Open my.telegram.org</string>
+    <string name="tg_unsupported_step">This account needs a sign-in step that is not supported here (%1$s). Finish signing in with the official Telegram app first, then try again.</string>
+
+    <!-- OTP -->
+    <string name="tg_otp_title">Enter the code</string>
+    <string name="tg_otp_body">Telegram sent a login code to your other Telegram app or by SMS for %1$s.</string>
+    <string name="tg_otp_label">Login code</string>
+    <string name="tg_verify">Verify</string>
+    <string name="tg_use_other_number">Use a different number</string>
+
+    <!-- 2FA -->
+    <string name="tg_2fa_title">Two-step verification</string>
+    <string name="tg_2fa_body">Enter your Telegram cloud password.</string>
+    <string name="tg_2fa_hint">Hint: %1$s</string>
+    <string name="tg_password_label">Password</string>
+    <string name="tg_show_password">Show password</string>
+    <string name="tg_hide_password">Hide password</string>
+
+    <!-- Resolver -->
+    <string name="tg_resolver_title">Telegram link resolver</string>
+    <string name="tg_resolver_body">Paste a link to a Telegram message that contains a file.</string>
+    <string name="tg_link_label">Telegram link</string>
+    <string name="tg_link_placeholder">https://t.me/channel/123</string>
+    <string name="tg_paste">Paste</string>
+    <string name="tg_resolve">Resolve file</string>
+    <string name="tg_resolving">Resolving…</string>
+    <string name="tg_connecting">Connecting to Telegram…</string>
+    <string name="tg_waiting_network">Waiting for network…</string>
+    <string name="tg_signed_in_as">Signed in as %1$s</string>
+    <string name="tg_open_settings">Telegram settings</string>
+
+    <!-- Details -->
+    <string name="tg_details_title">File details</string>
+    <string name="tg_field_name">File name</string>
+    <string name="tg_field_type">Type</string>
+    <string name="tg_field_size">Size</string>
+    <string name="tg_field_mime">MIME type</string>
+    <string name="tg_field_chat">Chat / channel</string>
+    <string name="tg_field_message">Message ID</string>
+    <string name="tg_field_date">Date</string>
+    <string name="tg_get_link">Get download link</string>
+    <string name="tg_copy_link">Copy download link</string>
+    <string name="tg_download_file">Download file</string>
+    <string name="tg_share_link">Share link</string>
+    <string name="tg_cancel">Cancel</string>
+    <string name="tg_downloading">Downloading… %1$s of %2$s</string>
+    <string name="tg_download_done">Saved to Downloads/Telegram: %1$s</string>
+    <string name="tg_open_file">Open</string>
+    <string name="tg_back">Back</string>
+    <string name="tg_creating_link">Creating link…</string>
+
+    <string name="kind_document">Document</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_audio">Audio</string>
+    <string name="kind_image">Image</string>
+    <string name="kind_apk">APK</string>
+    <string name="kind_archive">Archive</string>
+    <string name="kind_voice">Voice message</string>
+    <string name="kind_animation">Animation</string>
+    <string name="kind_other">File</string>
+
+    <!-- Download link screen -->
+    <string name="tg_link_title">Download link</string>
+    <string name="tg_link_url">Temporary URL</string>
+    <string name="tg_link_local_note">This link is served by Paradox Uploader on this device and streams the file from Telegram with your account. It only works on this phone, only while the app is running, and only until it expires.</string>
+    <string name="tg_link_expires_in">Expires in %1$s</string>
+    <string name="tg_link_expired">This link has expired</string>
+    <string name="tg_open_browser">Open in browser</string>
+    <string name="tg_revoke">Revoke link</string>
+    <string name="tg_link_failed_title">Couldn\'t create a link</string>
+    <string name="tg_link_failed_body">You can still fetch the file directly through your Telegram session.</string>
+    <string name="tg_use_direct">Download via Telegram session</string>
+
+    <!-- Settings -->
+    <string name="tg_settings_title">Telegram settings</string>
+    <string name="tg_settings_account">Account</string>
+    <string name="tg_settings_not_signed_in">Not signed in</string>
+    <string name="tg_settings_ttl">Link lifetime</string>
+    <string name="tg_settings_ttl_value">%1$d min</string>
+    <string name="tg_settings_cache">Clear Telegram cache</string>
+    <string name="tg_settings_cache_body">Removes files TDLib cached while streaming or downloading.</string>
+    <string name="tg_settings_cache_done">Cache cleared</string>
+    <string name="tg_settings_api">API credentials</string>
+    <string name="tg_settings_logout">Log out</string>
+    <string name="tg_settings_logout_title">Log out of Telegram?</string>
+    <string name="tg_settings_logout_body">Active links stop working and the encrypted session on this device is deleted.</string>
+    <string name="tg_settings_about">Everything runs on your device: login, link resolution and file transfer go straight between this phone and Telegram.</string>
+
+    <!-- Errors -->
+    <string name="tg_err_empty">Paste a Telegram link first.</string>
+    <string name="tg_err_invalid">That doesn\'t look like a Telegram message link. Use a link such as https://t.me/channel/123 or https://t.me/c/123456789/10.</string>
+    <string name="tg_err_invite">That is an invite link, not a message link. Open the chat, long-press the message and choose “Copy link”.</string>
+    <string name="tg_err_message_not_found">Message not found. It may have been deleted.</string>
+    <string name="tg_err_chat_inaccessible">This chat isn\'t accessible with your account. Join it in Telegram first.</string>
+    <string name="tg_err_private_channel">This private channel or group is restricted for your account.</string>
+    <string name="tg_err_permission">Telegram denied access to this content.</string>
+    <string name="tg_err_protected">The owner of this chat has restricted saving content, so it can\'t be downloaded.</string>
+    <string name="tg_err_unsupported_media">This message has no downloadable file (stickers, polls and text are not supported).</string>
+    <string name="tg_err_not_logged_in">You\'re not signed in to Telegram.</string>
+    <string name="tg_err_api_missing">Enter a valid API id and API hash.</string>
+    <string name="tg_err_session_expired">Your Telegram session expired. Please sign in again.</string>
+    <string name="tg_err_network">Network problem. Check your connection and try again.</string>
+    <string name="tg_err_rate_limited">Telegram is limiting requests. Try again in a moment.</string>
+    <string name="tg_err_flood">Too many attempts. Try again in %1$d seconds.</string>
+    <string name="tg_err_link_failed">Couldn\'t create a download link.</string>
+    <string name="tg_err_phone">That phone number isn\'t valid. Include the country code.</string>
+    <string name="tg_err_code">That code is wrong. Check it and try again.</string>
+    <string name="tg_err_code_expired">The code expired. Go back and request a new one.</string>
+    <string name="tg_err_password">Wrong password.</string>
+    <string name="tg_err_auth_other">Telegram refused this sign-in.</string>
+    <string name="tg_err_mtproto">Telegram error %1$d: %2$s</string>
+    <string name="tg_err_unknown">Something went wrong. %1$s</string>
+</resources>
