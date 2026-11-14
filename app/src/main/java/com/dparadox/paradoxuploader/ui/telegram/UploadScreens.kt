@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,16 +23,38 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AttachFile
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ClearAll
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,16 +71,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dparadox.paradoxuploader.data.telegram.HomeTab
 import com.dparadox.paradoxuploader.domain.telegram.ChatDestination
+import com.dparadox.paradoxuploader.domain.telegram.DestinationKind
 import com.dparadox.paradoxuploader.domain.telegram.ForumTopic
 import com.dparadox.paradoxuploader.domain.telegram.PickedFile
 import com.dparadox.paradoxuploader.domain.telegram.UploadJob
 import com.dparadox.paradoxuploader.domain.telegram.UploadStatus
+import com.dparadox.paradoxuploader.ui.components.EmptyState
+import com.dparadox.paradoxuploader.ui.components.FieldShape
+import com.dparadox.paradoxuploader.ui.components.IconTile
+import com.dparadox.paradoxuploader.ui.components.InitialAvatar
+import com.dparadox.paradoxuploader.ui.components.ParadoxCard
+import com.dparadox.paradoxuploader.ui.components.ParadoxProgress
+import com.dparadox.paradoxuploader.ui.components.PrimaryButton
+import com.dparadox.paradoxuploader.ui.components.SectionHeader
+import com.dparadox.paradoxuploader.ui.components.Spacing
+import com.dparadox.paradoxuploader.ui.components.SwitchRow
+import com.dparadox.paradoxuploader.ui.components.TonePill
 
 /** Topic icon colours offered in the create-topic dialog (TDLib's own palette). */
 private val TOPIC_COLORS = listOf(7322096, 16766590, 13338331, 9367192, 16749490, 16478047)
@@ -79,42 +112,69 @@ fun UploadDestinationScreen(
     TgScaffold(
         title = "Choose destination",
         onBack = onBack,
-        actions = { TextButton(onClick = { vm.loadDestinations() }) { Text("Refresh") } }
+        actions = {
+            IconButton(onClick = { vm.loadDestinations() }) {
+                Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")
+            }
+        }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                OutlinedButton(onClick = { showChannel = true }, modifier = Modifier.weight(1f)) { Text("New channel") }
-                OutlinedButton(onClick = { showGroup = true }, modifier = Modifier.weight(1f)) { Text("New group") }
+                FilledTonalButton(onClick = { showChannel = true }, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.Campaign, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("New channel")
+                }
+                FilledTonalButton(onClick = { showGroup = true }, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.Groups, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("New group")
+                }
             }
-            state.error?.let { ErrorCard(it, Modifier.padding(horizontal = 16.dp)) }
+            state.error?.let { ErrorCard(it, Modifier.padding(horizontal = Spacing.screen)) }
             if (state.loading) {
                 CenteredLoading("Loading your chats…")
             } else if (state.items.isEmpty()) {
-                Text(
-                    "No channels or groups yet. Create one above.",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                EmptyState(
+                    icon = Icons.Rounded.Forum,
+                    title = "No chats yet",
+                    body = "No channels or groups yet. Create one above."
                 )
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.sm, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     items(state.items, key = { it.chatId }) { dest ->
-                        Card(
-                            Modifier.fillMaxWidth().clickable {
+                        ParadoxCard(
+                            onClick = {
                                 vm.pickDestination(dest)
                                 onPicked()
-                            }
+                            },
+                            contentPadding = PaddingValues(Spacing.lg)
                         ) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(dest.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "${dest.typeLabel} · ID ${dest.chatId}",
-                                    style = MaterialTheme.typography.bodySmall
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                                InitialAvatar(dest.title)
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        dest.title.ifBlank { "Untitled" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "${dest.typeLabel} · ID ${dest.chatId}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    destinationIcon(dest.kind),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -157,6 +217,12 @@ fun UploadDestinationScreen(
     }
 }
 
+private fun destinationIcon(kind: DestinationKind) = when (kind) {
+    DestinationKind.FORUM -> Icons.Rounded.Forum
+    DestinationKind.CHANNEL -> Icons.Rounded.Campaign
+    else -> Icons.Rounded.Groups
+}
+
 @Composable
 private fun CreateChannelDialog(
     busy: Boolean,
@@ -169,17 +235,18 @@ private fun CreateChannelDialog(
     var username by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Rounded.Campaign, contentDescription = null) },
         title = { Text("New channel") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(desc, { desc = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, shape = FieldShape, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(desc, { desc = it }, label = { Text("Description") }, shape = FieldShape, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Public channel", modifier = Modifier.weight(1f))
+                    Text("Public channel", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Switch(checked = isPublic, onCheckedChange = { isPublic = it })
                 }
                 if (isPublic) {
-                    OutlinedTextField(username, { username = it }, label = { Text("Username") }, prefix = { Text("@") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(username, { username = it }, label = { Text("Username") }, prefix = { Text("@") }, singleLine = true, shape = FieldShape, modifier = Modifier.fillMaxWidth())
                 }
             }
         },
@@ -203,15 +270,20 @@ private fun CreateGroupDialog(
     var forum by remember { mutableStateOf(true) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Rounded.Groups, contentDescription = null) },
         title = { Text("New group") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(desc, { desc = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, shape = FieldShape, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(desc, { desc = it }, label = { Text("Description") }, shape = FieldShape, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Forum group (topics)")
-                        Text(if (forum) "Supports topics." else "Basic group, no topics.", style = MaterialTheme.typography.bodySmall)
+                        Text("Forum group (topics)", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (forum) "Supports topics." else "Basic group, no topics.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = forum, onCheckedChange = { forum = it })
                 }
@@ -224,6 +296,122 @@ private fun CreateGroupDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } }
     )
+}
+
+// ---------------------------------------------------------------- Shared upload pieces
+
+/** Dashed drop-zone style picker plus the list of chosen files. */
+@Composable
+private fun FilesPickerCard(
+    files: List<PickedFile>,
+    onPick: () -> Unit,
+    onClear: () -> Unit,
+    onRemove: (PickedFile) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    ParadoxCard(spacing = Spacing.md) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Files", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            if (files.isNotEmpty()) {
+                TonePill(text = files.size.toString(), container = scheme.primary, content = scheme.onPrimary, dot = false)
+                TextButton(onClick = onClear) { Text("Clear") }
+            }
+        }
+        Surface(
+            onClick = onPick,
+            shape = MaterialTheme.shapes.large,
+            color = scheme.primaryContainer.copy(alpha = 0.35f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, scheme.primary.copy(alpha = 0.4f), MaterialTheme.shapes.large)
+        ) {
+            Column(
+                Modifier.padding(vertical = Spacing.xl, horizontal = Spacing.lg),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                IconTile(Icons.Rounded.AttachFile, size = 48.dp, container = scheme.primary, content = scheme.onPrimary, circle = true)
+                Text("Choose files", style = MaterialTheme.typography.titleSmall, color = scheme.primary)
+            }
+        }
+        files.forEach { f -> FileInfoRow(f) { onRemove(f) } }
+    }
+}
+
+@Composable
+private fun CaptionCard(
+    caption: String,
+    onCaption: (String) -> Unit,
+    tags: String,
+    onTags: (String) -> Unit,
+    footer: Boolean,
+    onFooter: (Boolean) -> Unit
+) {
+    ParadoxCard(spacing = Spacing.md) {
+        Text("Message", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = caption,
+            onValueChange = onCaption,
+            label = { Text("Caption") },
+            minLines = 2,
+            shape = FieldShape,
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = tags,
+            onValueChange = onTags,
+            label = { Text("Tags (e.g. backup, apk)") },
+            prefix = { Text("#") },
+            singleLine = true,
+            shape = FieldShape,
+            modifier = Modifier.fillMaxWidth()
+        )
+        SwitchRow(
+            title = "Add \"Uploaded via Paradox Uploader\"",
+            subtitle = null,
+            checked = footer,
+            onChecked = onFooter
+        )
+    }
+}
+
+@Composable
+private fun QueueHeader(paused: Boolean, onTogglePause: () -> Unit, onClearDone: () -> Unit, pauseLabel: String) {
+    SectionHeader(
+        title = "Queue",
+        action = {
+            IconButton(onClick = onTogglePause) {
+                Icon(
+                    if (paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                    contentDescription = pauseLabel
+                )
+            }
+            TextButton(onClick = onClearDone) {
+                Icon(Icons.Rounded.ClearAll, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text("Clear done")
+            }
+        }
+    )
+}
+
+@Composable
+private fun QueueEmpty() {
+    ParadoxCard(contentPadding = PaddingValues(Spacing.lg)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            IconTile(
+                Icons.Rounded.Inbox,
+                container = MaterialTheme.colorScheme.surfaceContainerHighest,
+                content = MaterialTheme.colorScheme.onSurfaceVariant,
+                circle = true
+            )
+            Text(
+                "Nothing queued yet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 // ---------------------------------------------------------------- Upload dashboard
@@ -258,31 +446,50 @@ fun UploadDashboardScreen(
     TgScaffold(title = "Upload to Telegram", onBack = onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.sm, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             // Destination
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (dest == null) {
+                ParadoxCard(spacing = Spacing.md) {
+                    if (dest == null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                            IconTile(
+                                Icons.Rounded.Forum,
+                                container = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                content = MaterialTheme.colorScheme.onSurfaceVariant,
+                                circle = true
+                            )
                             Text("No destination selected", style = MaterialTheme.typography.titleMedium)
-                            Button(onClick = onChooseDestination) { Text("Choose destination") }
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(dest.title, style = MaterialTheme.typography.titleMedium)
-                                    Text(dest.typeLabel, style = MaterialTheme.typography.bodySmall)
-                                }
-                                TextButton(onClick = onChooseDestination) { Text("Change") }
-                            }
                         }
-                        if (recent.size > 1) {
-                            Text("Recent", style = MaterialTheme.typography.labelLarge)
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(recent, key = { it.chatId }) { r ->
-                                    AssistChip(onClick = { vm.pickDestination(r) }, label = { Text(r.title) })
-                                }
+                        PrimaryButton(text = "Choose destination", onClick = onChooseDestination)
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                            InitialAvatar(
+                                dest.title,
+                                container = MaterialTheme.colorScheme.tertiaryContainer,
+                                content = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(dest.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    dest.typeLabel,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            FilledTonalButton(onClick = onChooseDestination) { Text("Change") }
+                        }
+                    }
+                    if (recent.size > 1) {
+                        Text("Recent", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            items(recent, key = { it.chatId }) { r ->
+                                AssistChip(
+                                    onClick = { vm.pickDestination(r) },
+                                    label = { Text(r.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                    shape = CircleShape
+                                )
                             }
                         }
                     }
@@ -292,30 +499,26 @@ fun UploadDashboardScreen(
             // Topics
             if (dest?.supportsTopics == true) {
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Topic", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                                if (topics.loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                TextButton(onClick = { vm.loadTopics(dest.chatId) }) { Text("Refresh") }
-                                TextButton(onClick = { showNewTopic = true }) { Text("New topic") }
+                    ParadoxCard(spacing = Spacing.sm) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Topic", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            if (topics.loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            IconButton(onClick = { vm.loadTopics(dest.chatId) }) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")
                             }
-                            topics.error?.let { ErrorCard(it) }
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item {
-                                    FilterChip(
-                                        selected = selection.topic == null,
-                                        onClick = { vm.selectTopic(null) },
-                                        label = { Text("General") }
-                                    )
-                                }
-                                items(topics.items, key = { it.threadId }) { t ->
-                                    FilterChip(
-                                        selected = selection.topic?.threadId == t.threadId,
-                                        onClick = { vm.selectTopic(t) },
-                                        label = { Text(t.name) }
-                                    )
-                                }
+                            TextButton(onClick = { showNewTopic = true }) {
+                                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                Text("New topic")
+                            }
+                        }
+                        topics.error?.let { ErrorCard(it) }
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            item {
+                                TopicChip(selected = selection.topic == null, label = "General") { vm.selectTopic(null) }
+                            }
+                            items(topics.items, key = { it.threadId }) { t ->
+                                TopicChip(selected = selection.topic?.threadId == t.threadId, label = t.name) { vm.selectTopic(t) }
                             }
                         }
                     }
@@ -324,65 +527,39 @@ fun UploadDashboardScreen(
 
             // Files
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Files (${files.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                            if (files.isNotEmpty()) TextButton(onClick = { vm.clearFiles() }) { Text("Clear") }
-                        }
-                        OutlinedButton(
-                            onClick = { picker.launch(arrayOf("*/*")) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Choose files") }
-                        files.forEach { f -> FileInfoRow(f) { vm.removeFile(f.uri) } }
-                    }
-                }
+                FilesPickerCard(
+                    files = files,
+                    onPick = { picker.launch(arrayOf("*/*")) },
+                    onClear = { vm.clearFiles() },
+                    onRemove = { vm.removeFile(it.uri) }
+                )
             }
 
             // Caption
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = caption,
-                            onValueChange = { caption = it },
-                            label = { Text("Caption") },
-                            minLines = 2,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = tags,
-                            onValueChange = { tags = it },
-                            label = { Text("Tags (e.g. backup, apk)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Add \"Uploaded via Paradox Uploader\"", modifier = Modifier.weight(1f))
-                            Switch(checked = footer, onCheckedChange = { footer = it })
-                        }
-                    }
-                }
+                CaptionCard(caption, { caption = it }, tags, { tags = it }, footer, { footer = it })
             }
 
             item {
-                Button(
+                PrimaryButton(
+                    text = if (files.isEmpty()) "Start upload" else "Upload ${files.size} file(s)",
                     onClick = { vm.startUploads(caption, tags, footer) },
                     enabled = files.isNotEmpty() && dest != null,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (files.isEmpty()) "Start upload" else "Upload ${files.size} file(s)") }
+                    icon = Icons.Rounded.CloudUpload
+                )
             }
 
             // Queue
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Queue", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.setPaused(!paused) }) { Text(if (paused) "Resume queue" else "Pause queue") }
-                    TextButton(onClick = { vm.clearFinished() }) { Text("Clear done") }
-                }
+                QueueHeader(
+                    paused = paused,
+                    onTogglePause = { vm.setPaused(!paused) },
+                    onClearDone = { vm.clearFinished() },
+                    pauseLabel = if (paused) "Resume queue" else "Pause queue"
+                )
             }
             if (queue.isEmpty()) {
-                item { Text("Nothing queued yet.", style = MaterialTheme.typography.bodyMedium) }
+                item { QueueEmpty() }
             }
             items(queue, key = { it.id }) { job ->
                 QueueCard(
@@ -390,7 +567,8 @@ fun UploadDashboardScreen(
                     onRetry = { vm.retry(job.id) },
                     onCancel = { vm.cancel(job.id) },
                     onOpen = { openLink(context, it) },
-                    onShare = { shareLink(context, it) }
+                    onShare = { shareLink(context, it) },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -409,6 +587,19 @@ fun UploadDashboardScreen(
 }
 
 @Composable
+private fun TopicChip(selected: Boolean, label: String, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = if (selected) {
+            { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+        } else null,
+        shape = CircleShape
+    )
+}
+
+@Composable
 private fun CreateTopicDialog(
     busy: Boolean,
     onDismiss: () -> Unit,
@@ -418,21 +609,25 @@ private fun CreateTopicDialog(
     var color by remember { mutableStateOf(TOPIC_COLORS.first()) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Rounded.Forum, contentDescription = null) },
         title = { Text("New topic") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Topic name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                OutlinedTextField(name, { name = it }, label = { Text("Topic name") }, singleLine = true, shape = FieldShape, modifier = Modifier.fillMaxWidth())
                 Text("Icon colour (optional)", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TOPIC_COLORS.forEach { c ->
                         Box(
                             Modifier
-                                .size(28.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFF000000L or c.toLong()))
                                 .clickable { color = c }
-                                .then(if (c == color) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                        )
+                                .then(if (c == color) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (c == color) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -446,16 +641,47 @@ private fun CreateTopicDialog(
 
 @Composable
 private fun FileInfoRow(file: PickedFile, onRemove: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    val ext = file.name.substringAfterLast('.', "").uppercase().ifEmpty { "FILE" }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(start = Spacing.md, top = Spacing.sm, bottom = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(
+            Icons.AutoMirrored.Rounded.InsertDriveFile,
+            size = 36.dp,
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            content = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
-            Text(file.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            Text(file.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${file.name.substringAfterLast('.', "").uppercase().ifEmpty { "FILE" }} · " +
-                    "${formatBytes(file.size)} · ${file.mime}",
-                style = MaterialTheme.typography.bodySmall
+                "$ext · ${formatBytes(file.size)} · ${file.mime}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        TextButton(onClick = onRemove) { Text("Remove") }
+        IconButton(onClick = onRemove) {
+            Icon(Icons.Rounded.Close, contentDescription = "Remove")
+        }
+    }
+}
+
+@Composable
+private fun jobStatusColors(status: UploadStatus): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    return when (status) {
+        UploadStatus.WAITING -> scheme.surfaceContainerHighest to scheme.onSurfaceVariant
+        UploadStatus.UPLOADING -> scheme.primaryContainer to scheme.onPrimaryContainer
+        UploadStatus.COMPLETED -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        UploadStatus.FAILED -> scheme.errorContainer to scheme.onErrorContainer
+        UploadStatus.CANCELLED -> scheme.surfaceContainerHighest to scheme.onSurfaceVariant
     }
 }
 
@@ -465,59 +691,100 @@ private fun QueueCard(
     onRetry: () -> Unit,
     onCancel: () -> Unit,
     onOpen: (String) -> Unit,
-    onShare: (String) -> Unit
+    onShare: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val clipboard = LocalClipboardManager.current
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(job.fileName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1)
-                Text(statusLabel(job.status), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-            }
-            Text(
-                listOfNotNull(job.chatTitle, job.topicName).joinToString(" › "),
-                style = MaterialTheme.typography.bodySmall
+    val (pillContainer, pillContent) = jobStatusColors(job.status)
+    ParadoxCard(modifier = modifier, contentPadding = PaddingValues(Spacing.lg), spacing = Spacing.sm) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            IconTile(
+                Icons.AutoMirrored.Rounded.InsertDriveFile,
+                size = 44.dp,
+                container = pillContainer,
+                content = pillContent
             )
-
-            if (job.status == UploadStatus.UPLOADING || job.status == UploadStatus.COMPLETED) {
-                val pct = if (job.sizeBytes > 0) job.uploadedBytes.toFloat() / job.sizeBytes else 0f
-                LinearProgressIndicator(progress = pct.coerceIn(0f, 1f), modifier = Modifier.fillMaxWidth())
+            Column(Modifier.weight(1f)) {
+                Text(job.fileName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${(pct * 100).toInt()}% · ${formatBytes(job.uploadedBytes)} / ${formatBytes(job.sizeBytes)}",
-                    style = MaterialTheme.typography.bodySmall
+                    listOfNotNull(job.chatTitle, job.topicName).joinToString(" › "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (job.status == UploadStatus.UPLOADING) {
-                    Text(
-                        "Speed ${formatBytes(job.speedBps.toLong())}/s · Remaining ${formatEta(job.etaSeconds)}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
+            TonePill(text = statusLabel(job.status), container = pillContainer, content = pillContent)
+        }
 
-            if (job.status == UploadStatus.COMPLETED) {
+        if (job.status == UploadStatus.UPLOADING || job.status == UploadStatus.COMPLETED) {
+            val pct = if (job.sizeBytes > 0) job.uploadedBytes.toFloat() / job.sizeBytes else 0f
+            ParadoxProgress(
+                progress = { pct.coerceIn(0f, 1f) },
+                color = if (job.status == UploadStatus.COMPLETED) MaterialTheme.colorScheme.tertiary
+                else MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "${(pct * 100).toInt()}% · ${formatBytes(job.uploadedBytes)} / ${formatBytes(job.sizeBytes)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (job.status == UploadStatus.UPLOADING) {
                 Text(
-                    "Message ${job.messageId ?: "—"}",
-                    style = MaterialTheme.typography.bodySmall
+                    "Speed ${formatBytes(job.speedBps.toLong())}/s · Remaining ${formatEta(job.etaSeconds)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                job.link?.let { link ->
-                    Text(link, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = { clipboard.setText(AnnotatedString(link)) }) { Text("Copy link") }
-                        TextButton(onClick = { onShare(link) }) { Text("Share") }
-                        TextButton(onClick = { onOpen(link) }) { Text("Open") }
+            }
+        }
+
+        if (job.status == UploadStatus.COMPLETED) {
+            Text(
+                "Message ${job.messageId ?: "—"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            job.link?.let { link ->
+                Text(
+                    link,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    FilledTonalButton(
+                        onClick = { clipboard.setText(AnnotatedString(link)) },
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("Copy link")
+                    }
+                    IconButton(onClick = { onShare(link) }) {
+                        Icon(Icons.Rounded.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = { onOpen(link) }) {
+                        Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = "Open")
                     }
                 }
             }
+        }
 
-            job.error?.let { ErrorCard(it) }
+        job.error?.let { ErrorCard(it) }
 
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                when (job.status) {
-                    UploadStatus.WAITING, UploadStatus.UPLOADING -> TextButton(onClick = onCancel) { Text("Cancel") }
-                    UploadStatus.FAILED, UploadStatus.CANCELLED -> TextButton(onClick = onRetry) { Text("Retry") }
-                    UploadStatus.COMPLETED -> Unit
+        when (job.status) {
+            UploadStatus.WAITING, UploadStatus.UPLOADING -> Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onCancel) { Text("Cancel") }
+            }
+            UploadStatus.FAILED, UploadStatus.CANCELLED -> Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onRetry) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Retry")
                 }
             }
+            UploadStatus.COMPLETED -> Unit
         }
     }
 }
@@ -589,76 +856,48 @@ fun UploadPane(
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.sm, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         item { DestinationSection(HomeTab.UPLOAD, current, pins, onCreate, home) }
 
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Files (${files.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        if (files.isNotEmpty()) TextButton(onClick = { vm.clearFiles() }) { Text("Clear") }
-                    }
-                    OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Choose files")
-                    }
-                    files.forEach { f -> FileInfoRow(f) { vm.removeFile(f.uri) } }
-                }
-            }
+            FilesPickerCard(
+                files = files,
+                onPick = { picker.launch(arrayOf("*/*")) },
+                onClear = { vm.clearFiles() },
+                onRemove = { vm.removeFile(it.uri) }
+            )
         }
 
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = caption,
-                        onValueChange = { caption = it },
-                        label = { Text("Caption") },
-                        minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = tags,
-                        onValueChange = { tags = it },
-                        label = { Text("Tags (e.g. backup, apk)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Add \"Uploaded via Paradox Uploader\"", modifier = Modifier.weight(1f))
-                        Switch(checked = footer, onCheckedChange = { footer = it })
-                    }
-                }
-            }
+            CaptionCard(caption, { caption = it }, tags, { tags = it }, footer, { footer = it })
         }
 
         item {
-            Button(
+            val target = current
+            PrimaryButton(
+                text = when {
+                    target == null -> "Pick a default channel first"
+                    files.isEmpty() -> "Choose files to upload"
+                    else -> "Upload ${files.size} file(s) to ${target.title}"
+                },
                 onClick = { vm.startUploads(caption, tags, footer) },
-                enabled = files.isNotEmpty() && current != null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    when {
-                        current == null -> "Pick a default channel first"
-                        files.isEmpty() -> "Choose files to upload"
-                        else -> "Upload ${files.size} file(s) to ${current!!.title}"
-                    }
-                )
-            }
+                enabled = files.isNotEmpty() && target != null,
+                icon = Icons.Rounded.CloudUpload
+            )
         }
 
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Queue", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.setPaused(!paused) }) { Text(if (paused) "Resume" else "Pause") }
-                TextButton(onClick = { vm.clearFinished() }) { Text("Clear done") }
-            }
+            QueueHeader(
+                paused = paused,
+                onTogglePause = { vm.setPaused(!paused) },
+                onClearDone = { vm.clearFinished() },
+                pauseLabel = if (paused) "Resume" else "Pause"
+            )
         }
         if (queue.isEmpty()) {
-            item { Text("Nothing queued yet.", style = MaterialTheme.typography.bodyMedium) }
+            item { QueueEmpty() }
         }
         items(queue, key = { it.id }) { job ->
             QueueCard(
@@ -666,7 +905,8 @@ fun UploadPane(
                 onRetry = { vm.retry(job.id) },
                 onCancel = { vm.cancel(job.id) },
                 onOpen = { openLink(context, it) },
-                onShare = { shareLink(context, it) }
+                onShare = { shareLink(context, it) },
+                modifier = Modifier.animateItem()
             )
         }
     }

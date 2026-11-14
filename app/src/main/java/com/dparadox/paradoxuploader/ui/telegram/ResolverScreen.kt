@@ -8,7 +8,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +33,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dparadox.paradoxuploader.R
 import com.dparadox.paradoxuploader.domain.telegram.AuthState
 import com.dparadox.paradoxuploader.domain.telegram.ConnectionStatus
+import com.dparadox.paradoxuploader.ui.components.FieldShape
+import com.dparadox.paradoxuploader.ui.components.PrimaryButton
+import com.dparadox.paradoxuploader.ui.components.Spacing
+import com.dparadox.paradoxuploader.ui.components.TonePill
 
 @Composable
 fun ResolverScreen(
@@ -54,18 +61,28 @@ fun ResolverScreen(
         }
     ) { padding ->
         TgForm(padding) {
-            (auth as? AuthState.Ready)?.account?.displayName?.takeIf { it.isNotBlank() }?.let {
-                Text(stringResource(R.string.tg_signed_in_as, it), style = MaterialTheme.typography.labelLarge)
-            }
-            when (connection) {
-                ConnectionStatus.CONNECTING -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    InlineSpinner(); Text(stringResource(R.string.tg_connecting), style = MaterialTheme.typography.bodySmall)
+            val scheme = MaterialTheme.colorScheme
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                (auth as? AuthState.Ready)?.account?.displayName?.takeIf { it.isNotBlank() }?.let {
+                    TonePill(
+                        text = stringResource(R.string.tg_signed_in_as, it),
+                        container = scheme.tertiaryContainer,
+                        content = scheme.onTertiaryContainer
+                    )
                 }
-                ConnectionStatus.WAITING_FOR_NETWORK ->
-                    Text(stringResource(R.string.tg_waiting_network), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                ConnectionStatus.CONNECTED -> Unit
+                when (connection) {
+                    ConnectionStatus.CONNECTING -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        InlineSpinner(); Text(stringResource(R.string.tg_connecting), style = MaterialTheme.typography.bodySmall)
+                    }
+                    ConnectionStatus.WAITING_FOR_NETWORK -> TonePill(
+                        text = stringResource(R.string.tg_waiting_network),
+                        container = scheme.errorContainer,
+                        content = scheme.onErrorContainer
+                    )
+                    ConnectionStatus.CONNECTED -> Unit
+                }
             }
-            Text(stringResource(R.string.tg_resolver_body), style = MaterialTheme.typography.bodyMedium)
+            TgHeader(Icons.Rounded.Link, stringResource(R.string.tg_resolver_body))
             OutlinedTextField(
                 value = input,
                 onValueChange = vm::setInput,
@@ -73,23 +90,23 @@ fun ResolverScreen(
                 placeholder = { Text(stringResource(R.string.tg_link_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = FieldShape,
+                leadingIcon = { Icon(Icons.Rounded.Link, contentDescription = null) },
                 isError = ui is ResolveUi.Error,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { vm.resolve() }),
                 trailingIcon = {
-                    IconButton(onClick = { clipboard.getText()?.text?.let(vm::setInput) }) {
+                    FilledTonalIconButton(onClick = { clipboard.getText()?.text?.let(vm::setInput) }) {
                         Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.tg_paste))
                     }
                 }
             )
-            Button(onClick = vm::resolve, enabled = ui != ResolveUi.Loading, modifier = Modifier.fillMaxWidth()) {
-                if (ui == ResolveUi.Loading) {
-                    InlineSpinner()
-                    Text(stringResource(R.string.tg_resolving), modifier = Modifier.padding(start = 8.dp))
-                } else {
-                    Text(stringResource(R.string.tg_resolve))
-                }
-            }
+            PrimaryButton(
+                text = stringResource(if (ui == ResolveUi.Loading) R.string.tg_resolving else R.string.tg_resolve),
+                onClick = vm::resolve,
+                loading = ui == ResolveUi.Loading,
+                icon = Icons.Rounded.Search
+            )
             (ui as? ResolveUi.Error)?.let { ErrorCard(it.error) }
         }
     }

@@ -3,11 +3,6 @@
 package com.dparadox.paradoxuploader.ui.files
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -28,18 +22,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,15 +52,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -70,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -80,7 +82,19 @@ import com.dparadox.paradoxuploader.domain.model.Folder
 import com.dparadox.paradoxuploader.domain.model.UploadItem
 import com.dparadox.paradoxuploader.domain.model.UploadStatus
 import com.dparadox.paradoxuploader.domain.util.Formatters
+import com.dparadox.paradoxuploader.ui.components.DetailField
+import com.dparadox.paradoxuploader.ui.components.EmptyState
 import com.dparadox.paradoxuploader.ui.components.FileRow
+import com.dparadox.paradoxuploader.ui.components.FileThumb
+import com.dparadox.paradoxuploader.ui.components.LinkActions
+import com.dparadox.paradoxuploader.ui.components.ParadoxScaffold
+import com.dparadox.paradoxuploader.ui.components.PrimaryButton
+import com.dparadox.paradoxuploader.ui.components.QrDialog
+import com.dparadox.paradoxuploader.ui.components.SearchPill
+import com.dparadox.paradoxuploader.ui.components.SkeletonBlocks
+import com.dparadox.paradoxuploader.ui.components.Spacing
+import com.dparadox.paradoxuploader.ui.components.StatusChip
+import com.dparadox.paradoxuploader.ui.components.icon
 import com.dparadox.paradoxuploader.ui.components.FileRowActions
 import com.dparadox.paradoxuploader.ui.components.LinksMenu
 import com.dparadox.paradoxuploader.ui.components.LocalSnackbarHost
@@ -150,82 +164,71 @@ fun FilesScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (selecting) stringResource(R.string.selected_count, selection.size)
-                        else stringResource(R.string.nav_files)
-                    )
-                },
-                navigationIcon = {
-                    if (selecting) {
-                        IconButton(onClick = viewModel::clearSelection) {
-                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_selection))
-                        }
+    ParadoxScaffold(
+        title = if (selecting) stringResource(R.string.selected_count, selection.size)
+        else stringResource(R.string.nav_files),
+        navigationIcon = {
+            if (selecting) {
+                IconButton(onClick = viewModel::clearSelection) {
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_selection))
+                }
+            }
+        },
+        actions = {
+            Box {
+                IconButton(onClick = { linksMenuOpen = true }) {
+                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.links_menu))
+                }
+                LinksMenu(
+                    expanded = linksMenuOpen,
+                    onDismiss = { linksMenuOpen = false },
+                    items = if (selecting) items.filter { it.id in selection } else items,
+                    folderNames = folderNames
+                )
+            }
+            if (selecting) {
+                IconButton(onClick = { deleteRequest = DeleteRequest(selection.toList(), fromSwipe = false) }) {
+                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_selected))
+                }
+            } else {
+                Box {
+                    IconButton(onClick = { sortMenuOpen = true }) {
+                        Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
                     }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { linksMenuOpen = true }) {
-                            Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.links_menu))
-                        }
-                        LinksMenu(
-                            expanded = linksMenuOpen,
-                            onDismiss = { linksMenuOpen = false },
-                            items = if (selecting) items.filter { it.id in selection } else items,
-                            folderNames = folderNames
-                        )
-                    }
-                    if (selecting) {
-                        IconButton(onClick = { deleteRequest = DeleteRequest(selection.toList(), fromSwipe = false) }) {
-                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_selected))
-                        }
-                    } else {
-                        Box {
-                            IconButton(onClick = { sortMenuOpen = true }) {
-                                Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.sort))
-                            }
-                            DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
-                                SortOrder.entries.forEach { order ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(order.labelRes)) },
-                                        trailingIcon = {
-                                            if (filters.sort == order) Icon(Icons.Rounded.Check, contentDescription = null)
-                                        },
-                                        onClick = { viewModel.setSort(order); sortMenuOpen = false }
-                                    )
-                                }
-                            }
+                    DropdownMenu(
+                        expanded = sortMenuOpen,
+                        onDismissRequest = { sortMenuOpen = false },
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        SortOrder.entries.forEach { order ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(order.labelRes)) },
+                                trailingIcon = {
+                                    if (filters.sort == order) {
+                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                },
+                                onClick = { viewModel.setSort(order); sortMenuOpen = false }
+                            )
                         }
                     }
                 }
-            )
+            }
         },
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 840.dp).fillMaxSize()) {
-                OutlinedTextField(
+                SearchPill(
                     value = filters.query,
                     onValueChange = viewModel::setQuery,
-                    placeholder = { Text(stringResource(R.string.search_files)) },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (filters.query.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setQuery("") }) {
-                                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                    placeholder = stringResource(R.string.search_files),
+                    clearDescription = stringResource(R.string.clear_search),
+                    modifier = Modifier.padding(horizontal = Spacing.screen, vertical = Spacing.xs)
                 )
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     if (folders.isNotEmpty()) {
                         item {
@@ -237,17 +240,31 @@ fun FilesScreen(
                         }
                     }
                     items(UploadStatus.entries.toList()) { status ->
+                        val selected = status in filters.statuses
                         FilterChip(
-                            selected = status in filters.statuses,
+                            selected = selected,
                             onClick = { viewModel.toggleStatus(status) },
-                            label = { Text(stringResource(status.labelRes())) }
+                            label = { Text(stringResource(status.labelRes())) },
+                            leadingIcon = if (selected) {
+                                { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null,
+                            shape = CircleShape
                         )
                     }
                     items(FileType.entries.toList()) { type ->
+                        val selected = type in filters.types
                         FilterChip(
-                            selected = type in filters.types,
+                            selected = selected,
                             onClick = { viewModel.toggleType(type) },
-                            label = { Text(stringResource(type.labelRes())) }
+                            label = { Text(stringResource(type.labelRes())) },
+                            leadingIcon = {
+                                Icon(
+                                    if (selected) Icons.Rounded.Check else type.icon(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            },
+                            shape = CircleShape
                         )
                     }
                 }
@@ -258,12 +275,14 @@ fun FilesScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     when (val current = state) {
-                        FilesUiState.Loading -> SkeletonList()
+                        FilesUiState.Loading -> SkeletonBlocks()
                         is FilesUiState.Empty -> MessageState(
+                            icon = if (current.filtered) Icons.Rounded.SearchOff else Icons.Rounded.FolderOpen,
                             title = stringResource(if (current.filtered) R.string.no_results else R.string.files_empty_title),
                             body = stringResource(if (current.filtered) R.string.no_results_hint else R.string.files_empty_body)
                         )
                         is FilesUiState.Error -> MessageState(
+                            icon = Icons.Rounded.CloudOff,
                             title = stringResource(R.string.files_error_title),
                             body = current.message ?: stringResource(R.string.error_unknown),
                             actionLabel = stringResource(R.string.retry),
@@ -271,8 +290,8 @@ fun FilesScreen(
                         )
                         is FilesUiState.Content -> LazyColumn(
                             state = listState,
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(start = Spacing.screen, end = Spacing.screen, top = Spacing.xs, bottom = 32.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(current.items, key = { it.id }) { item ->
@@ -295,14 +314,21 @@ fun FilesScreen(
                                                 .fillMaxSize()
                                                 .clip(MaterialTheme.shapes.large)
                                                 .background(MaterialTheme.colorScheme.errorContainer)
-                                                .padding(end = 24.dp),
+                                                .padding(end = 28.dp),
                                             contentAlignment = Alignment.CenterEnd
                                         ) {
-                                            Icon(
-                                                Icons.Rounded.Delete,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onErrorContainer
-                                            )
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(
+                                                    Icons.Rounded.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                                )
+                                                Text(
+                                                    stringResource(R.string.delete),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                                )
+                                            }
                                         }
                                     }
                                 ) {
@@ -334,14 +360,21 @@ fun FilesScreen(
     deleteRequest?.let { request ->
         AlertDialog(
             onDismissRequest = { deleteRequest = null },
+            icon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.delete_title)) },
             text = { Text(stringResource(R.string.delete_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    deleteRequest = null
-                    if (request.fromSwipe) viewModel.scheduleDelete(request.ids) else viewModel.deleteNow(request.ids)
-                    viewModel.clearSelection()
-                }) { Text(stringResource(R.string.delete)) }
+                Button(
+                    onClick = {
+                        deleteRequest = null
+                        if (request.fromSwipe) viewModel.scheduleDelete(request.ids) else viewModel.deleteNow(request.ids)
+                        viewModel.clearSelection()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteRequest = null }) { Text(stringResource(R.string.cancel)) }
@@ -351,7 +384,10 @@ fun FilesScreen(
 
     val detailItem = items.firstOrNull { it.id == detailId }
     if (detailItem != null) {
-        ModalBottomSheet(onDismissRequest = { detailId = null }) {
+        ModalBottomSheet(
+            onDismissRequest = { detailId = null },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ) {
             DetailsContent(detailItem)
         }
     }
@@ -360,92 +396,93 @@ fun FilesScreen(
 @Composable
 private fun DetailsContent(item: UploadItem) {
     val context = LocalContext.current
+    var qrUrl by remember { mutableStateOf<String?>(null) }
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.xxl)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg)
     ) {
-        Text(item.fileName, style = MaterialTheme.typography.titleLarge)
-        DetailRow(stringResource(R.string.detail_direct_link), item.directUrl ?: stringResource(R.string.link_preparing), item.directUrl)
-        DetailRow(stringResource(R.string.detail_item_page), item.itemUrl, item.itemUrl)
-        DetailRow(stringResource(R.string.detail_size), Formatters.size(item.sizeBytes))
-        DetailRow(stringResource(R.string.detail_mime), item.mimeType)
-        DetailRow(stringResource(R.string.detail_date), formatDateTime(item.createdAt))
-        DetailRow(stringResource(R.string.detail_identifier), item.identifier, item.identifier)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+            FileThumb(item, size = 64.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.fileName, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                StatusChip(item.status)
+            }
+        }
         if (item.status == UploadStatus.READY && item.directUrl != null) {
-            Button(onClick = { UiActions.open(context, item.itemUrl) }) { Text(stringResource(R.string.open_item_page)) }
+            LinkActions(item = item, onQr = { qrUrl = item.directUrl })
+        }
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                DetailRow(stringResource(R.string.detail_direct_link), item.directUrl ?: stringResource(R.string.link_preparing), item.directUrl)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                DetailRow(stringResource(R.string.detail_item_page), item.itemUrl, item.itemUrl)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                DetailRow(stringResource(R.string.detail_identifier), item.identifier, item.identifier)
+            }
+        }
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                DetailRow(stringResource(R.string.detail_size), Formatters.size(item.sizeBytes))
+                DetailRow(stringResource(R.string.detail_mime), item.mimeType)
+                DetailRow(stringResource(R.string.detail_date), formatDateTime(item.createdAt))
+            }
+        }
+        if (item.status == UploadStatus.READY && item.directUrl != null) {
+            PrimaryButton(
+                text = stringResource(R.string.open_item_page),
+                onClick = { UiActions.open(context, item.itemUrl) },
+                icon = Icons.AutoMirrored.Rounded.OpenInNew
+            )
         }
     }
+    qrUrl?.let { QrDialog(url = it, onDismiss = { qrUrl = null }) }
 }
 
 @Composable
 private fun DetailRow(label: String, value: String, copyValue: String? = null) {
     val context = LocalContext.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.bodyMedium)
-        }
-        if (copyValue != null) {
-            IconButton(onClick = { UiActions.copy(context, copyValue) }) {
-                Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.copy_value, label))
+    DetailField(
+        label = label,
+        value = value,
+        trailing = if (copyValue != null) {
+            {
+                FilledTonalIconButton(onClick = { UiActions.copy(context, copyValue) }) {
+                    Icon(
+                        Icons.Rounded.ContentCopy,
+                        contentDescription = stringResource(R.string.copy_value, label),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
-        }
-    }
+        } else null
+    )
 }
 
 @Composable
 private fun MessageState(
+    icon: ImageVector,
     title: String,
     body: String,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            Icons.Rounded.Folder,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.height(56.dp)
+        EmptyState(
+            icon = icon,
+            title = title,
+            body = body,
+            action = if (actionLabel != null && onAction != null) {
+                { Button(onClick = onAction) { Text(actionLabel) } }
+            } else null
         )
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-        Text(
-            body,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        if (actionLabel != null && onAction != null) {
-            Button(onClick = onAction, modifier = Modifier.padding(top = 16.dp)) { Text(actionLabel) }
-        }
-    }
-}
-
-@Composable
-private fun SkeletonList() {
-    val transition = rememberInfiniteTransition(label = "skeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-        label = "skeleton-alpha"
-    )
-    Column(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        repeat(6) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(84.dp)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha))
-            )
-        }
     }
 }
 
@@ -464,9 +501,10 @@ private fun FolderFilterChip(folders: List<Folder>, selectedId: Long?, onSelect:
             onClick = { open = true },
             label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) },
-            trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) }
+            trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
+            shape = CircleShape
         )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, shape = MaterialTheme.shapes.medium) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.filter_folder_all)) },
                 trailingIcon = { if (selectedId == null) Icon(Icons.Rounded.Check, contentDescription = null) },

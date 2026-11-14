@@ -10,43 +10,66 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.BatterySaver
+import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Contrast
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.NetworkCheck
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Password
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -59,6 +82,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,7 +99,20 @@ import com.dparadox.paradoxuploader.domain.model.ThemeMode
 import com.dparadox.paradoxuploader.domain.util.ArchiveUrls
 import com.dparadox.paradoxuploader.domain.util.IdentifierError
 import com.dparadox.paradoxuploader.domain.util.IdentifierValidator
+import com.dparadox.paradoxuploader.ui.components.FieldShape
+import com.dparadox.paradoxuploader.ui.components.GroupLabel
+import com.dparadox.paradoxuploader.ui.components.HeroCard
+import com.dparadox.paradoxuploader.ui.components.IconTile
+import com.dparadox.paradoxuploader.ui.components.ListRow
 import com.dparadox.paradoxuploader.ui.components.LocalSnackbarHost
+import com.dparadox.paradoxuploader.ui.components.LogoMark
+import com.dparadox.paradoxuploader.ui.components.ParadoxCard
+import com.dparadox.paradoxuploader.ui.components.ParadoxProgress
+import com.dparadox.paradoxuploader.ui.components.ParadoxScaffold
+import com.dparadox.paradoxuploader.ui.components.ScreenColumn
+import com.dparadox.paradoxuploader.ui.components.Spacing
+import com.dparadox.paradoxuploader.ui.components.SwitchRow
+import com.dparadox.paradoxuploader.ui.components.TonePill
 import com.dparadox.paradoxuploader.ui.util.AppLockSupport
 import com.dparadox.paradoxuploader.ui.util.UiActions
 import com.dparadox.paradoxuploader.ui.util.formatDateTime
@@ -94,189 +131,266 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.nav_settings)) }) },
+    ParadoxScaffold(
+        title = stringResource(R.string.nav_settings),
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 720.dp)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                KeysSection(viewModel)
+        ScreenColumn(padding, spacing = Spacing.sm) {
+            SettingsHeader(hasKeys = viewModel.hasSavedKeys)
 
-                Section(stringResource(R.string.settings_upload)) {
-                    Text(stringResource(R.string.identifier_mode), style = MaterialTheme.typography.titleSmall)
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        val modes = listOf(
-                            IdentifierMode.NEW_PER_FILE to R.string.mode_new_per_file,
-                            IdentifierMode.FIXED to R.string.mode_fixed
-                        )
-                        modes.forEachIndexed { index, (mode, label) ->
-                            SegmentedButton(
-                                selected = settings.identifierMode == mode,
-                                onClick = { viewModel.update { it.copy(identifierMode = mode) } },
-                                shape = SegmentedButtonDefaults.itemShape(index, modes.size)
-                            ) { Text(stringResource(label)) }
-                        }
+            KeysSection(viewModel)
+
+            Section(stringResource(R.string.settings_upload)) {
+                Text(stringResource(R.string.identifier_mode), style = MaterialTheme.typography.titleSmall)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val modes = listOf(
+                        IdentifierMode.NEW_PER_FILE to R.string.mode_new_per_file,
+                        IdentifierMode.FIXED to R.string.mode_fixed
+                    )
+                    modes.forEachIndexed { index, (mode, label) ->
+                        SegmentedButton(
+                            selected = settings.identifierMode == mode,
+                            onClick = { viewModel.update { it.copy(identifierMode = mode) } },
+                            shape = SegmentedButtonDefaults.itemShape(index, modes.size)
+                        ) { Text(stringResource(label), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
-                    if (settings.identifierMode == IdentifierMode.FIXED) {
-                        var fixedId by rememberSaveable { mutableStateOf(settings.fixedIdentifier) }
-                        val error = IdentifierValidator.validate(fixedId)
-                        OutlinedTextField(
-                            value = fixedId,
-                            onValueChange = { value ->
-                                fixedId = value
-                                viewModel.update { it.copy(fixedIdentifier = value) }
-                            },
-                            label = { Text(stringResource(R.string.fixed_identifier)) },
-                            isError = error != null,
-                            supportingText = {
-                                Text(
-                                    if (error == null) stringResource(R.string.identifier_rules)
-                                    else stringResource(identifierErrorRes(error))
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    var collection by rememberSaveable { mutableStateOf(settings.defaultCollection) }
+                }
+                if (settings.identifierMode == IdentifierMode.FIXED) {
+                    var fixedId by rememberSaveable { mutableStateOf(settings.fixedIdentifier) }
+                    val error = IdentifierValidator.validate(fixedId)
                     OutlinedTextField(
-                        value = collection,
+                        value = fixedId,
                         onValueChange = { value ->
-                            collection = value
-                            viewModel.update { it.copy(defaultCollection = value.trim()) }
+                            fixedId = value
+                            viewModel.update { it.copy(fixedIdentifier = value) }
                         },
-                        label = { Text(stringResource(R.string.default_collection)) },
-                        supportingText = { Text(stringResource(R.string.collection_hint)) },
+                        label = { Text(stringResource(R.string.fixed_identifier)) },
+                        isError = error != null,
+                        supportingText = {
+                            Text(
+                                if (error == null) stringResource(R.string.identifier_rules)
+                                else stringResource(identifierErrorRes(error))
+                            )
+                        },
                         singleLine = true,
+                        shape = FieldShape,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text(stringResource(R.string.default_mediatype), style = MaterialTheme.typography.titleSmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MEDIATYPES.forEach { type ->
-                            FilterChip(
-                                selected = settings.defaultMediatype == type,
-                                onClick = { viewModel.update { it.copy(defaultMediatype = type) } },
-                                label = { Text(type) }
-                            )
-                        }
+                }
+                var collection by rememberSaveable { mutableStateOf(settings.defaultCollection) }
+                OutlinedTextField(
+                    value = collection,
+                    onValueChange = { value ->
+                        collection = value
+                        viewModel.update { it.copy(defaultCollection = value.trim()) }
+                    },
+                    label = { Text(stringResource(R.string.default_collection)) },
+                    supportingText = { Text(stringResource(R.string.collection_hint)) },
+                    singleLine = true,
+                    shape = FieldShape,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(stringResource(R.string.default_mediatype), style = MaterialTheme.typography.titleSmall)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    MEDIATYPES.forEach { type ->
+                        val selected = settings.defaultMediatype == type
+                        FilterChip(
+                            selected = selected,
+                            onClick = { viewModel.update { it.copy(defaultMediatype = type) } },
+                            label = { Text(type) },
+                            leadingIcon = if (selected) {
+                                { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null,
+                            shape = CircleShape
+                        )
                     }
-                    SettingSwitch(
-                        title = stringResource(R.string.wifi_only),
-                        subtitle = stringResource(R.string.wifi_only_hint),
-                        checked = settings.wifiOnly,
-                        onChecked = viewModel::setWifiOnly
+                }
+                SettingSwitch(
+                    title = stringResource(R.string.wifi_only),
+                    subtitle = stringResource(R.string.wifi_only_hint),
+                    checked = settings.wifiOnly,
+                    onChecked = viewModel::setWifiOnly,
+                    icon = Icons.Rounded.Wifi
+                )
+                SettingSwitch(
+                    title = stringResource(R.string.charging_only),
+                    subtitle = stringResource(R.string.charging_only_hint),
+                    checked = settings.chargingOnly,
+                    onChecked = viewModel::setChargingOnly,
+                    icon = Icons.Rounded.BatteryChargingFull
+                )
+                var slider by remember(settings.concurrentUploads) {
+                    mutableFloatStateOf(settings.concurrentUploads.toFloat())
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                    IconTile(
+                        Icons.Rounded.Speed,
+                        container = MaterialTheme.colorScheme.secondaryContainer,
+                        content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        circle = true
                     )
-                    SettingSwitch(
-                        title = stringResource(R.string.charging_only),
-                        subtitle = stringResource(R.string.charging_only_hint),
-                        checked = settings.chargingOnly,
-                        onChecked = viewModel::setChargingOnly
-                    )
-                    var slider by remember(settings.concurrentUploads) {
-                        mutableFloatStateOf(settings.concurrentUploads.toFloat())
-                    }
                     Text(
                         stringResource(R.string.concurrent_uploads, slider.roundToInt()),
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Slider(
-                        value = slider,
-                        onValueChange = { slider = it },
-                        onValueChangeFinished = {
-                            viewModel.update { it.copy(concurrentUploads = slider.roundToInt()) }
-                        },
-                        valueRange = 1f..3f,
-                        steps = 1
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
+                Slider(
+                    value = slider,
+                    onValueChange = { slider = it },
+                    onValueChangeFinished = {
+                        viewModel.update { it.copy(concurrentUploads = slider.roundToInt()) }
+                    },
+                    valueRange = 1f..3f,
+                    steps = 1
+                )
+            }
 
-                HistorySection(viewModel, settings.syncUri, settings.lastSyncAt)
+            HistorySection(viewModel, settings.syncUri, settings.lastSyncAt)
 
-                CleanupSection(viewModel, settings.autoRemoveEmptyFolders)
+            CleanupSection(viewModel, settings.autoRemoveEmptyFolders)
 
-                Section(stringResource(R.string.settings_appearance)) {
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        val themes = listOf(
-                            ThemeMode.LIGHT to R.string.theme_light,
-                            ThemeMode.DARK to R.string.theme_dark,
-                            ThemeMode.SYSTEM to R.string.theme_system
-                        )
-                        themes.forEachIndexed { index, (mode, label) ->
-                            SegmentedButton(
-                                selected = settings.themeMode == mode,
-                                onClick = { viewModel.update { it.copy(themeMode = mode) } },
-                                shape = SegmentedButtonDefaults.itemShape(index, themes.size)
-                            ) { Text(stringResource(label)) }
-                        }
-                    }
-                    val dynamicSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    SettingSwitch(
-                        title = stringResource(R.string.dynamic_color),
-                        subtitle = stringResource(
-                            if (dynamicSupported) R.string.dynamic_color_hint else R.string.dynamic_color_unsupported
-                        ),
-                        checked = settings.dynamicColor && dynamicSupported,
-                        enabled = dynamicSupported,
-                        onChecked = { value -> viewModel.update { it.copy(dynamicColor = value) } }
+            Section(stringResource(R.string.settings_appearance)) {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val themes = listOf(
+                        Triple(ThemeMode.LIGHT, R.string.theme_light, Icons.Rounded.LightMode),
+                        Triple(ThemeMode.DARK, R.string.theme_dark, Icons.Rounded.DarkMode),
+                        Triple(ThemeMode.SYSTEM, R.string.theme_system, Icons.Rounded.BrightnessAuto)
                     )
-                    SettingSwitch(
-                        title = stringResource(R.string.amoled_black),
-                        subtitle = stringResource(R.string.amoled_hint),
-                        checked = settings.amoled,
-                        onChecked = { value -> viewModel.update { it.copy(amoled = value) } }
-                    )
-                }
-
-                Section(stringResource(R.string.settings_security)) {
-                    SettingSwitch(
-                        title = stringResource(R.string.app_lock),
-                        subtitle = stringResource(R.string.app_lock_hint),
-                        checked = settings.appLock,
-                        onChecked = { value ->
-                            if (value && !AppLockSupport.isAvailable(context)) {
-                                scope.launch { snackbar.showSnackbar(context.getString(R.string.app_lock_unavailable)) }
-                            } else {
-                                viewModel.update { it.copy(appLock = value) }
+                    themes.forEachIndexed { index, (mode, label, icon) ->
+                        SegmentedButton(
+                            selected = settings.themeMode == mode,
+                            onClick = { viewModel.update { it.copy(themeMode = mode) } },
+                            shape = SegmentedButtonDefaults.itemShape(index, themes.size),
+                            icon = {
+                                SegmentedButtonDefaults.Icon(active = settings.themeMode == mode) {
+                                    Icon(icon, contentDescription = null, modifier = Modifier.size(SegmentedButtonDefaults.IconSize))
+                                }
                             }
-                        }
-                    )
+                        ) { Text(stringResource(label), maxLines = 1) }
+                    }
                 }
+                val dynamicSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                SettingSwitch(
+                    title = stringResource(R.string.dynamic_color),
+                    subtitle = stringResource(
+                        if (dynamicSupported) R.string.dynamic_color_hint else R.string.dynamic_color_unsupported
+                    ),
+                    checked = settings.dynamicColor && dynamicSupported,
+                    enabled = dynamicSupported,
+                    onChecked = { value -> viewModel.update { it.copy(dynamicColor = value) } },
+                    icon = Icons.Rounded.Palette
+                )
+                SettingSwitch(
+                    title = stringResource(R.string.amoled_black),
+                    subtitle = stringResource(R.string.amoled_hint),
+                    checked = settings.amoled,
+                    onChecked = { value -> viewModel.update { it.copy(amoled = value) } },
+                    icon = Icons.Rounded.Contrast
+                )
+            }
 
-                Section(stringResource(R.string.settings_background)) {
-                    Text(stringResource(R.string.battery_hint), style = MaterialTheme.typography.bodyMedium)
-                    OutlinedButton(onClick = {
+            Section(stringResource(R.string.settings_security)) {
+                SettingSwitch(
+                    title = stringResource(R.string.app_lock),
+                    subtitle = stringResource(R.string.app_lock_hint),
+                    checked = settings.appLock,
+                    onChecked = { value ->
+                        if (value && !AppLockSupport.isAvailable(context)) {
+                            scope.launch { snackbar.showSnackbar(context.getString(R.string.app_lock_unavailable)) }
+                        } else {
+                            viewModel.update { it.copy(appLock = value) }
+                        }
+                    },
+                    icon = Icons.Rounded.Fingerprint
+                )
+            }
+
+            Section(stringResource(R.string.settings_background)) {
+                ListRow(
+                    title = stringResource(R.string.battery_button),
+                    subtitle = stringResource(R.string.battery_hint),
+                    icon = Icons.Rounded.BatterySaver,
+                    onClick = {
                         context.startActivity(
                             Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
-                    }) { Text(stringResource(R.string.battery_button)) }
-                }
+                    },
+                    trailing = { ChevronIcon() }
+                )
+            }
 
-                UpdatesSection(viewModel, settings.autoCheckUpdates)
+            UpdatesSection(viewModel, settings.autoCheckUpdates)
 
-                Section(stringResource(R.string.settings_about)) {
-                    Text(
-                        stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
-                        style = MaterialTheme.typography.bodyMedium
+            Section(stringResource(R.string.settings_about)) {
+                ListRow(
+                    title = stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
+                    subtitle = stringResource(R.string.privacy_note),
+                    icon = Icons.Rounded.Info
+                )
+                ListRow(
+                    title = stringResource(R.string.archive_terms),
+                    icon = Icons.Rounded.Gavel,
+                    onClick = { UiActions.open(context, ArchiveUrls.TERMS_PAGE) },
+                    trailing = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                )
+                ListRow(
+                    title = "Help, terms & how to use",
+                    icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                    onClick = onOpenHelp,
+                    trailing = { ChevronIcon() }
+                )
+            }
+        }
+    }
+}
+
+/** Profile-style header: logo, app name, version and key status. */
+@Composable
+private fun SettingsHeader(hasKeys: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    HeroCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+            LogoMark(size = 64.dp, container = scheme.primary, tint = scheme.onPrimary)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = scheme.onPrimaryContainer
+                )
+                Text(
+                    stringResource(R.string.settings_header_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = 4.dp)) {
+                    TonePill(
+                        text = stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
+                        container = scheme.surface.copy(alpha = 0.7f),
+                        content = scheme.onSurface,
+                        dot = false
                     )
-                    Text(stringResource(R.string.privacy_note), style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = { UiActions.open(context, ArchiveUrls.TERMS_PAGE) }) {
-                        Text(stringResource(R.string.archive_terms))
-                    }
-                    TextButton(onClick = onOpenHelp) {
-                        Text("Help, terms & how to use")
-                    }
+                    TonePill(
+                        text = stringResource(if (hasKeys) R.string.keys_status_ready else R.string.keys_status_missing),
+                        container = if (hasKeys) scheme.tertiary else scheme.error,
+                        content = if (hasKeys) scheme.onTertiary else scheme.onError
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ChevronIcon() {
+    Icon(
+        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 private fun identifierErrorRes(error: IdentifierError): Int = when (error) {
@@ -289,12 +403,9 @@ private fun identifierErrorRes(error: IdentifierError): Int = when (error) {
 
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(top = Spacing.sm)) {
+        GroupLabel(title)
+        ParadoxCard(spacing = Spacing.md) {
             content()
         }
     }
@@ -306,15 +417,17 @@ private fun SettingSwitch(
     subtitle: String,
     checked: Boolean,
     onChecked: (Boolean) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    icon: ImageVector? = null
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onChecked, enabled = enabled)
-    }
+    SwitchRow(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        onChecked = onChecked,
+        enabled = enabled,
+        icon = icon
+    )
 }
 
 @Composable
@@ -325,10 +438,20 @@ private fun KeysSection(viewModel: SettingsViewModel) {
     val keyboard = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password)
 
     Section(stringResource(R.string.settings_keys)) {
-        Text(
-            stringResource(if (viewModel.hasSavedKeys) R.string.keys_saved else R.string.keys_not_saved),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        val saved = viewModel.hasSavedKeys
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            IconTile(
+                if (saved) Icons.Rounded.VerifiedUser else Icons.Rounded.Key,
+                container = if (saved) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer,
+                content = if (saved) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                circle = true
+            )
+            Text(
+                stringResource(if (saved) R.string.keys_saved else R.string.keys_not_saved),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+        }
         OutlinedTextField(
             value = viewModel.accessKey,
             onValueChange = { viewModel.accessKey = it },
@@ -336,6 +459,8 @@ private fun KeysSection(viewModel: SettingsViewModel) {
             singleLine = true,
             visualTransformation = transformation,
             keyboardOptions = keyboard,
+            shape = FieldShape,
+            leadingIcon = { Icon(Icons.Rounded.Key, contentDescription = null) },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -345,6 +470,8 @@ private fun KeysSection(viewModel: SettingsViewModel) {
             singleLine = true,
             visualTransformation = transformation,
             keyboardOptions = keyboard,
+            shape = FieldShape,
+            leadingIcon = { Icon(Icons.Rounded.Password, contentDescription = null) },
             trailingIcon = {
                 IconButton(onClick = { viewModel.showKeys = !viewModel.showKeys }) {
                     Icon(
@@ -357,27 +484,44 @@ private fun KeysSection(viewModel: SettingsViewModel) {
             },
             modifier = Modifier.fillMaxWidth()
         )
-        if (state is KeyUiState.Testing) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (state is KeyUiState.Testing) ParadoxProgress(progress = null)
         KeyStatusText(state)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
             Button(onClick = viewModel::saveKeys, enabled = state !is KeyUiState.Testing) {
+                Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 Text(stringResource(R.string.save))
             }
-            OutlinedButton(onClick = viewModel::testKeys, enabled = state !is KeyUiState.Testing) {
+            FilledTonalButton(onClick = viewModel::testKeys, enabled = state !is KeyUiState.Testing) {
+                Icon(Icons.Rounded.NetworkCheck, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 Text(stringResource(R.string.test_key))
             }
-            TextButton(onClick = viewModel::removeKeys, enabled = state !is KeyUiState.Testing) {
+            TextButton(
+                onClick = viewModel::removeKeys,
+                enabled = state !is KeyUiState.Testing,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
                 Text(stringResource(R.string.remove_keys))
             }
         }
-        TextButton(onClick = { UiActions.open(context, ArchiveUrls.KEYS_PAGE) }) {
-            Text(stringResource(R.string.get_keys))
-        }
+        ListRow(
+            title = stringResource(R.string.get_keys),
+            icon = Icons.Rounded.Link,
+            onClick = { UiActions.open(context, ArchiveUrls.KEYS_PAGE) },
+            trailing = {
+                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        )
     }
 
     if (state is KeyUiState.AskSaveAnyway) {
         AlertDialog(
             onDismissRequest = viewModel::dismissKeyDialog,
+            icon = { Icon(Icons.Rounded.ErrorOutline, contentDescription = null) },
             title = { Text(stringResource(R.string.test_failed_title)) },
             text = { Text(keyErrorText(state.kind, state.message)) },
             confirmButton = { TextButton(onClick = viewModel::saveAnyway) { Text(stringResource(R.string.save_anyway)) } },
@@ -471,8 +615,16 @@ private fun HistorySection(viewModel: SettingsViewModel, syncUri: String, lastSy
     }
 
     Section(stringResource(R.string.settings_history)) {
-        Text(stringResource(R.string.history_hint), style = MaterialTheme.typography.bodyMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            IconTile(
+                Icons.Rounded.History,
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer,
+                circle = true
+            )
+            Text(stringResource(R.string.history_hint), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             OutlinedButton(onClick = { exportLauncher.launch("paradox-history.json") }, enabled = !busy) {
                 Text(stringResource(R.string.history_export))
             }
@@ -488,7 +640,7 @@ private fun HistorySection(viewModel: SettingsViewModel, syncUri: String, lastSy
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 OutlinedButton(onClick = { createSyncLauncher.launch("paradox-history.json") }, enabled = !busy) {
                     Text(stringResource(R.string.history_sync_create))
                 }
@@ -506,7 +658,7 @@ private fun HistorySection(viewModel: SettingsViewModel, syncUri: String, lastSy
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Button(onClick = viewModel::syncNow, enabled = !busy) {
                     Text(stringResource(R.string.history_sync_now))
                 }
@@ -525,6 +677,7 @@ private fun HistorySection(viewModel: SettingsViewModel, syncUri: String, lastSy
             onValueChange = { viewModel.archiveInput = it },
             label = { Text(stringResource(R.string.history_add_label)) },
             singleLine = true,
+            shape = FieldShape,
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedButton(
@@ -532,7 +685,7 @@ private fun HistorySection(viewModel: SettingsViewModel, syncUri: String, lastSy
             enabled = !busy && viewModel.archiveInput.isNotBlank()
         ) { Text(stringResource(R.string.history_add_button)) }
 
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (busy) ParadoxProgress(progress = null)
         viewModel.historyResult?.let { (action, result) ->
             val failed = result !is HistoryResult.Success
             Text(
@@ -568,7 +721,8 @@ private fun CleanupSection(viewModel: SettingsViewModel, autoRemove: Boolean) {
             title = stringResource(R.string.cleanup_auto),
             subtitle = stringResource(R.string.cleanup_auto_hint),
             checked = autoRemove,
-            onChecked = { value -> viewModel.update { it.copy(autoRemoveEmptyFolders = value) } }
+            onChecked = { value -> viewModel.update { it.copy(autoRemoveEmptyFolders = value) } },
+            icon = Icons.Rounded.CleaningServices
         )
         Text(stringResource(R.string.cleanup_empty_folders, emptyFolders), style = MaterialTheme.typography.titleSmall)
         OutlinedButton(onClick = viewModel::removeEmptyFolders, enabled = emptyFolders > 0) {
@@ -587,7 +741,7 @@ private fun CleanupSection(viewModel: SettingsViewModel, autoRemove: Boolean) {
         OutlinedButton(onClick = viewModel::scanEmptyItems, enabled = !viewModel.scanBusy) {
             Text(stringResource(R.string.cleanup_scan))
         }
-        if (viewModel.scanBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (viewModel.scanBusy) ParadoxProgress(progress = null)
         if (scan != null) {
             Text(stringResource(R.string.cleanup_scan_count, scan.empty.size), style = MaterialTheme.typography.bodyMedium)
             scan.empty.forEach { identifier ->
@@ -631,13 +785,16 @@ private fun UpdatesSection(viewModel: SettingsViewModel, autoCheck: Boolean) {
             title = stringResource(R.string.update_auto),
             subtitle = stringResource(R.string.update_auto_hint),
             checked = autoCheck,
-            onChecked = { value -> viewModel.update { it.copy(autoCheckUpdates = value) } }
+            onChecked = { value -> viewModel.update { it.copy(autoCheckUpdates = value) } },
+            icon = Icons.Rounded.Autorenew
         )
-        OutlinedButton(onClick = viewModel::checkForUpdates, enabled = state !is UpdateUiState.Checking) {
+        FilledTonalButton(onClick = viewModel::checkForUpdates, enabled = state !is UpdateUiState.Checking) {
+            Icon(Icons.Rounded.SystemUpdate, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
             Text(stringResource(R.string.update_check))
         }
         if (state is UpdateUiState.Checking) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
+            ParadoxProgress(progress = null)
             Text(stringResource(R.string.update_checking), style = MaterialTheme.typography.bodySmall)
         }
         when (state) {

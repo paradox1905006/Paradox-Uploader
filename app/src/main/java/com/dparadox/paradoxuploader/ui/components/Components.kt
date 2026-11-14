@@ -2,6 +2,7 @@
 
 package com.dparadox.paradoxuploader.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,11 +20,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.AudioFile
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
@@ -37,14 +40,16 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.VideoFile
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -58,12 +63,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.dparadox.paradoxuploader.R
@@ -81,23 +88,30 @@ val LocalSnackbarHost = staticCompositionLocalOf<SnackbarHostState> {
     error("SnackbarHostState not provided")
 }
 
+/** Colour roles for an upload status: container and content. */
+@Composable
+fun statusColors(status: UploadStatus): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    return when (status) {
+        UploadStatus.UPLOADING -> scheme.primaryContainer to scheme.onPrimaryContainer
+        UploadStatus.PROCESSING -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        UploadStatus.READY -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        UploadStatus.DELAYED -> scheme.surfaceContainerHighest to scheme.onSurfaceVariant
+        UploadStatus.FAILED -> scheme.errorContainer to scheme.onErrorContainer
+    }
+}
+
 @Composable
 fun StatusChip(status: UploadStatus, modifier: Modifier = Modifier) {
-    val scheme = MaterialTheme.colorScheme
-    val (label, container, content) = when (status) {
-        UploadStatus.UPLOADING -> Triple(R.string.status_uploading, scheme.primaryContainer, scheme.onPrimaryContainer)
-        UploadStatus.PROCESSING -> Triple(R.string.status_processing, scheme.tertiaryContainer, scheme.onTertiaryContainer)
-        UploadStatus.READY -> Triple(R.string.status_ready, scheme.secondaryContainer, scheme.onSecondaryContainer)
-        UploadStatus.DELAYED -> Triple(R.string.status_delayed, scheme.surfaceVariant, scheme.onSurfaceVariant)
-        UploadStatus.FAILED -> Triple(R.string.status_failed, scheme.errorContainer, scheme.onErrorContainer)
+    val label = when (status) {
+        UploadStatus.UPLOADING -> R.string.status_uploading
+        UploadStatus.PROCESSING -> R.string.status_processing
+        UploadStatus.READY -> R.string.status_ready
+        UploadStatus.DELAYED -> R.string.status_delayed
+        UploadStatus.FAILED -> R.string.status_failed
     }
-    Surface(modifier = modifier, shape = CircleShape, color = container, contentColor = content) {
-        Text(
-            text = stringResource(label),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium
-        )
-    }
+    val (container, content) = statusColors(status)
+    TonePill(text = stringResource(label), container = container, content = content, modifier = modifier)
 }
 
 fun FileType.icon(): ImageVector = when (this) {
@@ -109,13 +123,25 @@ fun FileType.icon(): ImageVector = when (this) {
     FileType.OTHER -> Icons.Rounded.InsertDriveFile
 }
 
+/** Tonal container colours per file type, so lists are easy to scan. */
 @Composable
-fun FileThumb(item: UploadItem, modifier: Modifier = Modifier) {
+fun FileType.tileColors(): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    return when (this) {
+        FileType.IMAGE, FileType.VIDEO -> scheme.primaryContainer to scheme.onPrimaryContainer
+        FileType.AUDIO, FileType.ARCHIVE -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        FileType.DOCUMENT, FileType.OTHER -> scheme.secondaryContainer to scheme.onSecondaryContainer
+    }
+}
+
+@Composable
+fun FileThumb(item: UploadItem, modifier: Modifier = Modifier, size: Dp = 52.dp) {
+    val (container, content) = item.fileType.tileColors()
     Box(
         modifier = modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer),
+            .size(size)
+            .clip(RoundedCornerShape(size * 0.32f))
+            .background(container),
         contentAlignment = Alignment.Center
     ) {
         val url = item.directUrl
@@ -130,7 +156,8 @@ fun FileThumb(item: UploadItem, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = item.fileType.icon(),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                tint = content,
+                modifier = Modifier.size(size * 0.5f)
             )
         }
     }
@@ -141,28 +168,44 @@ fun FileThumb(item: UploadItem, modifier: Modifier = Modifier) {
 fun LinkActions(item: UploadItem, onQr: (() -> Unit)?, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val url = item.directUrl ?: return
-    FlowRow(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AssistChip(
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        FilledTonalButton(
             onClick = { UiActions.copy(context, url) },
-            label = { Text(stringResource(R.string.copy_link)) },
-            leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp)) }
-        )
-        AssistChip(
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.copy_link))
+        }
+        OutlinedButton(
             onClick = { UiActions.share(context, url) },
-            label = { Text(stringResource(R.string.share)) },
-            leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp)) }
-        )
-        AssistChip(
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.share))
+        }
+        OutlinedButton(
             onClick = { UiActions.open(context, url) },
-            label = { Text(stringResource(R.string.open)) },
-            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp)) }
-        )
+            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.open))
+        }
         if (onQr != null) {
-            AssistChip(
+            OutlinedButton(
                 onClick = onQr,
-                label = { Text(stringResource(R.string.qr_code)) },
-                leadingIcon = { Icon(Icons.Rounded.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp)) }
-            )
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+            ) {
+                Icon(Icons.Rounded.QrCode2, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.qr_code))
+            }
         }
     }
 }
@@ -172,17 +215,30 @@ fun QrDialog(url: String, onDismiss: () -> Unit) {
     val bitmap = remember(url) { QrCode.bitmap(url).asImageBitmap() }
     AlertDialog(
         onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.QrCode2, contentDescription = null) },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
         title = { Text(stringResource(R.string.qr_code)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = stringResource(R.string.qr_code_description),
-                    modifier = Modifier.size(240.dp)
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = Color.White,
+                    modifier = Modifier.size(248.dp)
+                ) {
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = stringResource(R.string.qr_code_description),
+                        modifier = Modifier.fillMaxSize().padding(Spacing.md)
+                    )
+                }
+                Spacer(Modifier.size(Spacing.lg))
+                Text(
+                    url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.size(12.dp))
-                Text(url, style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
         }
     )
@@ -211,6 +267,10 @@ fun FileRow(
     val isReady = item.status == UploadStatus.READY && item.directUrl != null
     val isPending = item.status == UploadStatus.PROCESSING || item.status == UploadStatus.DELAYED
     var menuOpen by remember { mutableStateOf(false) }
+    val container by animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        label = "row-container"
+    )
 
     Surface(
         modifier = modifier
@@ -218,17 +278,28 @@ fun FileRow(
             .clip(MaterialTheme.shapes.large)
             .combinedClickable(onClick = actions.onClick, onLongClick = actions.onLongClick),
         shape = MaterialTheme.shapes.large,
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerLow
+        color = container
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (selecting) {
-                Checkbox(checked = selected, onCheckedChange = null)
-                Spacer(Modifier.width(8.dp))
+        Row(
+            Modifier.padding(start = Spacing.lg, top = Spacing.lg, bottom = Spacing.lg, end = Spacing.xs),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                FileThumb(item)
+                if (selecting && selected) {
+                    Box(
+                        Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
             }
-            FileThumb(item)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Spacer(Modifier.width(Spacing.lg))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = item.fileName,
                     style = MaterialTheme.typography.titleSmall,
@@ -241,13 +312,22 @@ fun FileRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (folderName != null) {
-                    Text(
-                        text = stringResource(R.string.in_folder, folderName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.in_folder, folderName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 when {
                     isReady -> Text(
@@ -271,21 +351,42 @@ fun FileRow(
                     )
                 }
                 if (item.status == UploadStatus.PROCESSING) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    ParadoxProgress(progress = null, modifier = Modifier.padding(vertical = 4.dp))
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
                     StatusChip(item.status)
                     if (isPending) {
-                        TextButton(onClick = actions.onCheckNow) { Text(stringResource(R.string.check_now)) }
+                        TextButton(
+                            onClick = actions.onCheckNow,
+                            contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 0.dp)
+                        ) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.check_now))
+                        }
                     }
                 }
             }
-            if (!selecting) {
+            if (selecting) {
+                Checkbox(checked = selected, onCheckedChange = null, modifier = Modifier.padding(Spacing.md))
+            } else {
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.more_options),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false },
+                        shape = MaterialTheme.shapes.medium
+                    ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.copy_link)) },
                             leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
@@ -322,9 +423,12 @@ fun FileRow(
                                 onClick = { menuOpen = false; actions.onCheckNow() }
                             )
                         }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete)) },
-                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            },
                             onClick = { menuOpen = false; actions.onDelete() }
                         )
                     }

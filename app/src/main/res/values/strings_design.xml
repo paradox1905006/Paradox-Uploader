@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Labels added by the Material You redesign. -->
+    <string name="upload_hero_title">Upload to the Internet Archive</string>
+    <string name="pending_metadata">Details (optional)</string>
+    <string name="settings_header_subtitle">Archive.org and Telegram uploader</string>
+    <string name="keys_status_ready">Keys saved</string>
+    <string name="keys_status_missing">Keys needed</string>
+    <string name="tg_tab_upload">Upload</string>
+    <string name="tg_tab_download">Download</string>
+    <string name="tg_paste_link_action">Paste link</string>
+</resources>

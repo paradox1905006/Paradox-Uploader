@@ -8,20 +8,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.InsertDriveFile
+import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -35,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +45,14 @@ import coil.compose.AsyncImage
 import com.dparadox.paradoxuploader.R
 import com.dparadox.paradoxuploader.domain.telegram.ResolvedFile
 import com.dparadox.paradoxuploader.domain.util.Formatters
+import com.dparadox.paradoxuploader.ui.components.DetailField
+import com.dparadox.paradoxuploader.ui.components.EmptyState
+import com.dparadox.paradoxuploader.ui.components.IconTile
+import com.dparadox.paradoxuploader.ui.components.ParadoxCard
+import com.dparadox.paradoxuploader.ui.components.ParadoxProgress
+import com.dparadox.paradoxuploader.ui.components.PrimaryButton
+import com.dparadox.paradoxuploader.ui.components.Spacing
+import com.dparadox.paradoxuploader.ui.components.TonePill
 import com.dparadox.paradoxuploader.ui.util.UiActions
 import com.dparadox.paradoxuploader.ui.util.formatDateTime
 import java.io.File
@@ -70,29 +81,29 @@ fun FileDetailsScreen(
         val f = file
         TgForm(padding) {
             if (f == null) {
-                Text(stringResource(R.string.tg_err_unsupported_media))
+                EmptyState(
+                    icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
+                    title = stringResource(R.string.tg_details_title),
+                    body = stringResource(R.string.tg_err_unsupported_media)
+                )
                 return@TgForm
             }
             FileHeader(f)
-            InfoCard(f)
 
-            Button(onClick = onGetLink, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Rounded.Link, null, Modifier.size(18.dp))
-                Text(stringResource(R.string.tg_get_link), modifier = Modifier.padding(start = 8.dp))
-            }
+            PrimaryButton(text = stringResource(R.string.tg_get_link), onClick = onGetLink, icon = Icons.Rounded.Link)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { vm.ensureLink(LinkAction.COPY) },
                     enabled = linkUi != LinkUi.Creating,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                 ) {
                     Icon(Icons.Rounded.ContentCopy, null, Modifier.size(18.dp))
                     Text(stringResource(R.string.tg_copy_link), modifier = Modifier.padding(start = 8.dp), maxLines = 1)
                 }
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { vm.ensureLink(LinkAction.SHARE) },
                     enabled = linkUi != LinkUi.Creating,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                 ) {
                     Icon(Icons.Rounded.Share, null, Modifier.size(18.dp))
                     Text(stringResource(R.string.tg_share_link), modifier = Modifier.padding(start = 8.dp), maxLines = 1)
@@ -101,48 +112,66 @@ fun FileDetailsScreen(
             (linkUi as? LinkUi.Failed)?.let { ErrorCard(it.error) }
 
             DownloadSection(f, download, onStart = vm::startDownload, onCancel = vm::cancelDownload)
+            InfoCard(f)
         }
     }
 }
 
 @Composable
 private fun FileHeader(f: ResolvedFile) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (f.thumbnailPath != null) {
-            AsyncImage(
-                model = File(f.thumbnailPath),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(88.dp).clip(RoundedCornerShape(16.dp))
+    val scheme = MaterialTheme.colorScheme
+    Surface(shape = MaterialTheme.shapes.extraLarge, color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(Spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            if (f.thumbnailPath != null) {
+                AsyncImage(
+                    model = File(f.thumbnailPath),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(140.dp).clip(RoundedCornerShape(28.dp))
+                )
+            } else {
+                IconTile(
+                    Icons.AutoMirrored.Rounded.InsertDriveFile,
+                    size = 96.dp,
+                    container = scheme.primaryContainer,
+                    content = scheme.onPrimaryContainer
+                )
+            }
+            Text(
+                f.fileName,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
             )
-        } else {
-            Icon(Icons.Rounded.InsertDriveFile, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                TonePill(text = kindLabel(f.kind), container = scheme.secondaryContainer, content = scheme.onSecondaryContainer, dot = false)
+                TonePill(text = Formatters.size(f.sizeBytes), container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer, dot = false)
+            }
         }
-        Text(f.fileName, style = MaterialTheme.typography.titleMedium, maxLines = 4)
     }
 }
 
 @Composable
 private fun InfoCard(f: ResolvedFile) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            InfoRow(R.string.tg_field_name, f.fileName)
-            InfoRow(R.string.tg_field_type, kindLabel(f.kind))
-            InfoRow(R.string.tg_field_size, Formatters.size(f.sizeBytes))
-            InfoRow(R.string.tg_field_mime, f.mimeType)
-            InfoRow(R.string.tg_field_chat, f.chatTitle.ifBlank { "—" })
-            InfoRow(R.string.tg_field_message, f.messageId.toString())
-            InfoRow(R.string.tg_field_date, formatDateTime(f.dateMillis))
-        }
+    ParadoxCard(spacing = Spacing.md) {
+        InfoRow(R.string.tg_field_name, f.fileName)
+        InfoRow(R.string.tg_field_type, kindLabel(f.kind))
+        InfoRow(R.string.tg_field_size, Formatters.size(f.sizeBytes))
+        InfoRow(R.string.tg_field_mime, f.mimeType)
+        InfoRow(R.string.tg_field_chat, f.chatTitle.ifBlank { "—" })
+        InfoRow(R.string.tg_field_message, f.messageId.toString())
+        InfoRow(R.string.tg_field_date, formatDateTime(f.dateMillis))
     }
 }
 
 @Composable
 private fun InfoRow(label: Int, value: String) {
-    Column {
-        Text(stringResource(label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
-    }
+    DetailField(label = stringResource(label), value = value)
 }
 
 @Composable
@@ -150,27 +179,35 @@ fun DownloadSection(f: ResolvedFile, state: DownloadUi, onStart: () -> Unit, onC
     val context = LocalContext.current
     when (state) {
         DownloadUi.Idle, is DownloadUi.Failed -> {
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
                 Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
                 Text(stringResource(R.string.tg_download_file), modifier = Modifier.padding(start = 8.dp))
             }
             (state as? DownloadUi.Failed)?.let { ErrorCard(it.error) }
         }
-        is DownloadUi.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            LinearProgressIndicator(
-                progress = { if (state.total > 0) state.bytes.toFloat() / state.total else 0f },
-                modifier = Modifier.fillMaxWidth().height(6.dp)
-            )
-            Text(
-                stringResource(R.string.tg_downloading, Formatters.size(state.bytes), Formatters.size(state.total)),
-                style = MaterialTheme.typography.bodySmall
-            )
-            TextButton(onClick = onCancel) { Text(stringResource(R.string.tg_cancel)) }
+        is DownloadUi.Running -> ParadoxCard(spacing = Spacing.sm) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                IconTile(Icons.Rounded.Download, size = 36.dp, circle = true)
+                Text(
+                    stringResource(R.string.tg_downloading, Formatters.size(state.bytes), Formatters.size(state.total)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.tg_cancel)) }
+            }
+            ParadoxProgress(progress = { if (state.total > 0) state.bytes.toFloat() / state.total else 0f })
         }
-        is DownloadUi.Done -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.tg_download_done, state.name), style = MaterialTheme.typography.bodyMedium)
+        is DownloadUi.Done -> ParadoxCard(
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            spacing = Spacing.md
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = null)
+                Text(stringResource(R.string.tg_download_done, state.name), style = MaterialTheme.typography.bodyMedium)
+            }
             if (state.uri.startsWith("content://")) {
-                OutlinedButton(onClick = {
+                Button(onClick = {
                     try {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW)

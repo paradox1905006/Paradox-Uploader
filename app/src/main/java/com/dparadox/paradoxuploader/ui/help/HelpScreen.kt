@@ -1,68 +1,91 @@
 package com.dparadox.paradoxuploader.ui.help
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Rule
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.dparadox.paradoxuploader.ui.components.IconTile
+import com.dparadox.paradoxuploader.ui.components.ParadoxCard
+import com.dparadox.paradoxuploader.ui.components.ParadoxScaffold
+import com.dparadox.paradoxuploader.ui.components.ScreenColumn
+import com.dparadox.paradoxuploader.ui.components.Spacing
 
 /**
  * Help, terms and conditions. The wording describes how the app works today.
  * Have the legal sections reviewed before publishing a release.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Help & terms") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(PaddingValues(horizontal = 20.dp, vertical = 16.dp)),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Block("How to use Paradox Uploader", HOW_TO_USE)
-            Block("Archive.org upload", ARCHIVE_HELP)
-            Block("Telegram upload", TELEGRAM_HELP)
-            Block("Settings", SETTINGS_HELP)
-            Block("Privacy", PRIVACY)
-            Block("Terms of use", TERMS)
-            Block("Conditions", CONDITIONS)
+    ParadoxScaffold(title = "Help & terms", onBack = onBack) { padding ->
+        ScreenColumn(padding, spacing = Spacing.md) {
+            val scheme = MaterialTheme.colorScheme
+            Block(Icons.Rounded.Lightbulb, "How to use Paradox Uploader", HOW_TO_USE, scheme.primaryContainer, scheme.onPrimaryContainer)
+            Block(Icons.Rounded.CloudUpload, "Archive.org upload", ARCHIVE_HELP, scheme.primaryContainer, scheme.onPrimaryContainer)
+            Block(Icons.AutoMirrored.Rounded.Send, "Telegram upload", TELEGRAM_HELP, scheme.tertiaryContainer, scheme.onTertiaryContainer)
+            Block(Icons.Rounded.Settings, "Settings", SETTINGS_HELP, scheme.secondaryContainer, scheme.onSecondaryContainer)
+            Block(Icons.Rounded.Shield, "Privacy", PRIVACY, scheme.tertiaryContainer, scheme.onTertiaryContainer)
+            Block(Icons.Rounded.Gavel, "Terms of use", TERMS, scheme.secondaryContainer, scheme.onSecondaryContainer)
+            Block(Icons.Rounded.Rule, "Conditions", CONDITIONS, scheme.secondaryContainer, scheme.onSecondaryContainer)
         }
     }
 }
 
+private val STEP = Regex("^(\\d+)\\.\\s+(.*)$")
+
 @Composable
-private fun Block(title: String, body: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        body.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+private fun Block(icon: ImageVector, title: String, body: List<String>, container: Color, content: Color) {
+    ParadoxCard(spacing = Spacing.md) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(icon, container = container, content = content)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = Spacing.md)
+            )
+        }
+        body.forEach { line ->
+            val step = STEP.find(line)
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md), verticalAlignment = Alignment.Top) {
+                if (step != null) {
+                    Surface(shape = CircleShape, color = container, contentColor = content, modifier = Modifier.size(24.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(step.groupValues[1], style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                } else {
+                    Box(Modifier.padding(top = 7.dp).size(24.dp), contentAlignment = Alignment.TopCenter) {
+                        Surface(shape = CircleShape, color = content.copy(alpha = 0.5f), modifier = Modifier.size(6.dp)) {}
+                    }
+                }
+                Text(
+                    step?.groupValues?.get(2) ?: line,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 

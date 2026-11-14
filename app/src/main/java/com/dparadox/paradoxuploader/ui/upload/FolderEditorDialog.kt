@@ -9,7 +9,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +34,7 @@ import com.dparadox.paradoxuploader.R
 import com.dparadox.paradoxuploader.domain.model.Folder
 import com.dparadox.paradoxuploader.domain.model.FolderMeta
 import com.dparadox.paradoxuploader.domain.util.Licenses
+import com.dparadox.paradoxuploader.ui.components.FieldShape
 
 /**
  * Creates a folder ([initial] == null) or edits one. The title, description, tags and license
@@ -47,20 +54,27 @@ fun FolderEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        icon = { Icon(if (initial == null) Icons.Rounded.CreateNewFolder else Icons.Rounded.Edit, contentDescription = null) },
         title = { Text(stringResource(if (initial == null) R.string.folder_new else R.string.folder_edit)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.folder_name)) },
                     singleLine = true,
+                    shape = FieldShape,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(stringResource(R.string.folder_defaults_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.folder_defaults_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
                 Text(
                     stringResource(R.string.folder_defaults_hint),
                     style = MaterialTheme.typography.bodySmall,
@@ -71,6 +85,7 @@ fun FolderEditorDialog(
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.folder_title_label)) },
                     singleLine = true,
+                    shape = FieldShape,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -78,6 +93,7 @@ fun FolderEditorDialog(
                     onValueChange = { description = it },
                     label = { Text(stringResource(R.string.folder_description_label)) },
                     minLines = 2,
+                    shape = FieldShape,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -86,10 +102,15 @@ fun FolderEditorDialog(
                     label = { Text(stringResource(R.string.folder_tags_label)) },
                     supportingText = { Text(stringResource(R.string.tags_hint)) },
                     singleLine = true,
+                    shape = FieldShape,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(stringResource(R.string.folder_license_label), style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.folder_license_label),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilterChip(
                         selected = license.isEmpty(),
                         onClick = { license = "" },
@@ -113,7 +134,7 @@ fun FolderEditorDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 enabled = name.isNotBlank(),
                 onClick = {
                     onSave(

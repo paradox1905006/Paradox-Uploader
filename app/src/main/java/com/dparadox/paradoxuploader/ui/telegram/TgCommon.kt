@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.dparadox.paradoxuploader.ui.telegram
 
 import androidx.compose.foundation.layout.Arrangement
@@ -15,27 +13,26 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dparadox.paradoxuploader.R
 import com.dparadox.paradoxuploader.domain.telegram.AuthFailure
 import com.dparadox.paradoxuploader.domain.telegram.FileKind
 import com.dparadox.paradoxuploader.domain.telegram.TgError
+import com.dparadox.paradoxuploader.ui.components.IconTile
+import com.dparadox.paradoxuploader.ui.components.LogoMark
+import com.dparadox.paradoxuploader.ui.components.ParadoxScaffold
+import com.dparadox.paradoxuploader.ui.components.Spacing
 
 @Composable
 fun tgErrorText(error: TgError): String = when (error) {
@@ -90,20 +87,10 @@ fun TgScaffold(
     actions: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.tg_back))
-                        }
-                    }
-                },
-                actions = { actions() }
-            )
-        },
+    ParadoxScaffold(
+        title = title,
+        onBack = onBack,
+        actions = { actions() },
         content = content
     )
 }
@@ -117,35 +104,91 @@ fun TgForm(padding: PaddingValues, content: @Composable () -> Unit) {
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = Spacing.xl)
+                .padding(top = Spacing.sm, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) { content() }
+    }
+}
+
+/** Big icon + headline + supporting text shown at the top of Telegram forms. */
+@Composable
+fun TgHeader(icon: ImageVector, body: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(
+            icon,
+            size = 56.dp,
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            content = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
 @Composable
 fun ErrorCard(error: TgError, modifier: Modifier = Modifier) {
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
-            Text(tgErrorText(error), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.padding(Spacing.lg), horizontalArrangement = Arrangement.spacedBy(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(
+                Icons.Rounded.ErrorOutline,
+                size = 36.dp,
+                container = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.12f),
+                content = MaterialTheme.colorScheme.onErrorContainer,
+                circle = true
+            )
+            Text(tgErrorText(error), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         }
     }
 }
 
 @Composable
 fun CenteredLoading(text: String? = null) {
-    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        CircularProgressIndicator()
-        if (text != null) Text(text, modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.bodyMedium)
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(72.dp),
+                strokeWidth = 4.dp,
+                strokeCap = StrokeCap.Round,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            )
+            LogoMark(size = 40.dp)
+        }
+        if (text != null) {
+            Text(
+                text,
+                modifier = Modifier.padding(top = Spacing.xl),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 @Composable
-fun InlineSpinner() = CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+fun InlineSpinner() = CircularProgressIndicator(
+    Modifier.size(18.dp),
+    strokeWidth = 2.dp,
+    strokeCap = StrokeCap.Round,
+    color = MaterialTheme.colorScheme.onSurfaceVariant
+)
 
 fun formatRemaining(ms: Long): String {
     val s = ms / 1000

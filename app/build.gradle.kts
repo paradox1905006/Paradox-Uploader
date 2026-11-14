@@ -21,11 +21,11 @@ android {
         applicationId = "com.dparadox.paradoxuploader"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.2"
         // Where the app looks for new versions. Point it at your own GitHub "latest release" API URL,
         // or at a small JSON file: {"versionName": "1.4.0", "url": "https://...", "notes": "..."}
-        buildConfigField("String", "UPDATE_CHECK_URL", "\"https://api.github.com/repos/dparadox/ParadoxUploader/releases/latest\"")
+        buildConfigField("String", "UPDATE_CHECK_URL", "\"https://api.github.com/repos/paradox1905006/Paradox-Uploader/releases/latest\"")
         // Telegram API credentials from my.telegram.org. Optional here: the app can also ask for them at login.
         buildConfigField("int", "TELEGRAM_API_ID", (localProps.getProperty("TELEGRAM_API_ID") ?: "0").trim())
         buildConfigField("String", "TELEGRAM_API_HASH", "\"${localProps.getProperty("TELEGRAM_API_HASH") ?: ""}\"")
