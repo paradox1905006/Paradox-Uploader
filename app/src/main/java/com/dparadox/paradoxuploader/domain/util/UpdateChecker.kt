@@ -18,7 +18,7 @@ class UpdateChecker @Inject constructor(
     /** Always asks the server (used by the "Check for updates" button). */
     suspend fun check(currentVersion: String): UpdateCheckResult =
         when (val result = service.latest()) {
-            is ApiResult.Failure -> UpdateCheckResult.Failed
+            is ApiResult.Failure -> UpdateCheckResult.Failed(result.message.takeIf { it.isNotBlank() })
             is ApiResult.Success -> {
                 val now = clock.nowMs()
                 settings.update { it.copy(lastUpdateCheckAt = now) }

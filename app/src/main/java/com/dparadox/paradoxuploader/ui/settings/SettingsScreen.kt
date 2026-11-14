@@ -802,10 +802,19 @@ private fun UpdatesSection(viewModel: SettingsViewModel, autoCheck: Boolean) {
                 stringResource(R.string.update_up_to_date),
                 color = MaterialTheme.colorScheme.secondary
             )
-            UpdateUiState.Failed -> Text(
-                stringResource(R.string.update_failed),
-                color = MaterialTheme.colorScheme.error
-            )
+            is UpdateUiState.Failed -> Column {
+                Text(
+                    stringResource(R.string.update_failed),
+                    color = MaterialTheme.colorScheme.error
+                )
+                state.reason?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
             is UpdateUiState.Available -> {
                 Text(
                     stringResource(R.string.update_body, state.info.versionName),

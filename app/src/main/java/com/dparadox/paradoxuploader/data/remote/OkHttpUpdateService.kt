@@ -38,16 +38,23 @@ class OkHttpUpdateService @Inject constructor(
             val request = Request.Builder().url(url).get().header("Accept", "application/json").build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
+                    // GitHub's anonymous API allows only 60 requests/hour per IP. Phones behind a
+                    // carrier's shared (CGNAT) IP, or behind a VPN, commonly hit this as 403/429
+                    // even though the phone itself has a perfectly good connection.
+                    val reason = when (response.code) {
+                        403, 429 -> "HTTP ${response.code}: rate limited (shared IP?)"
+                        else -> "HTTP ${response.code}"
+                    }
                     return@use ApiResult.Failure(
                         if (response.code == 404) ErrorKind.NOT_FOUND else ErrorKind.SERVER,
                         response.code,
-                        ""
+                        reason
                     )
                 }
                 parse(response.body?.string().orEmpty())
             }
         } catch (e: IOException) {
-            ApiResult.Failure(ErrorKind.NETWORK, null, e.message.orEmpty())
+            ApiResult.Failure(ErrorKind.NETWORK, null, e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
         }
     }
 

@@ -48,7 +48,7 @@ sealed interface UpdateUiState {
     data object Checking : UpdateUiState
     data object UpToDate : UpdateUiState
     data class Available(val info: UpdateInfo) : UpdateUiState
-    data object Failed : UpdateUiState
+    data class Failed(val reason: String? = null) : UpdateUiState
 }
 
 @HiltViewModel
@@ -72,7 +72,7 @@ class SettingsViewModel @Inject constructor(
             updateState = when (val result = updates.check(BuildConfig.VERSION_NAME)) {
                 UpdateCheckResult.UpToDate -> UpdateUiState.UpToDate
                 is UpdateCheckResult.Available -> UpdateUiState.Available(result.info)
-                UpdateCheckResult.Failed -> UpdateUiState.Failed
+                is UpdateCheckResult.Failed -> UpdateUiState.Failed(result.reason)
             }
         }
     }

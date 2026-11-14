@@ -21,11 +21,18 @@ android {
         applicationId = "com.dparadox.paradoxuploader"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.2"
-        // Where the app looks for new versions. Point it at your own GitHub "latest release" API URL,
-        // or at a small JSON file: {"versionName": "1.4.0", "url": "https://...", "notes": "..."}
-        buildConfigField("String", "UPDATE_CHECK_URL", "\"https://api.github.com/repos/paradox1905006/Paradox-Uploader/releases/latest\"")
+        versionCode = 6
+        versionName = "1.7.0"
+        // Where the app looks for new versions. NOTE: api.github.com enforces a 60 requests/hour
+        // limit PER IP for anonymous callers. Phones behind a carrier's shared (CGNAT) IP, or
+        // behind a VPN, share that IP with many other people and hit the limit constantly, while
+        // WiFi (a less-shared home/office IP) usually doesn't - this is why "check for updates"
+        // can fail on mobile data but work on WiFi.
+        //
+        // raw.githubusercontent.com is a CDN, not the rate-limited API, so update.json committed
+        // to the repo and read from there has no such limit. Bump "versionName" in that file on
+        // every release.
+        buildConfigField("String", "UPDATE_CHECK_URL", "\"https://raw.githubusercontent.com/paradox1905006/Paradox-Uploader/main/update.json\"")
         // Telegram API credentials from my.telegram.org. Optional here: the app can also ask for them at login.
         buildConfigField("int", "TELEGRAM_API_ID", (localProps.getProperty("TELEGRAM_API_ID") ?: "0").trim())
         buildConfigField("String", "TELEGRAM_API_HASH", "\"${localProps.getProperty("TELEGRAM_API_HASH") ?: ""}\"")

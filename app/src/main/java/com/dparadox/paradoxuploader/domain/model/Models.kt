@@ -137,7 +137,8 @@ data class UpdateInfo(val versionName: String, val url: String, val notes: Strin
 sealed interface UpdateCheckResult {
     data object UpToDate : UpdateCheckResult
     data class Available(val info: UpdateInfo) : UpdateCheckResult
-    data object Failed : UpdateCheckResult
+    /** [reason] is a short, user-safe diagnostic (e.g. "HTTP 403: rate limited"), not a full stack trace. */
+    data class Failed(val reason: String? = null) : UpdateCheckResult
 }
 
 /** Files found inside a folder the user picked on the device. */
