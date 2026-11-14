@@ -132,7 +132,13 @@ data class UploadStats(
 )
 
 /** A newer app version found by the update check. */
-data class UpdateInfo(val versionName: String, val url: String, val notes: String = "")
+data class UpdateInfo(
+    val versionName: String,
+    val url: String,
+    val notes: String = "",
+    /** Direct link to the release .apk, if one was found. Enables in-app download + install. */
+    val apkUrl: String? = null
+)
 
 sealed interface UpdateCheckResult {
     data object UpToDate : UpdateCheckResult

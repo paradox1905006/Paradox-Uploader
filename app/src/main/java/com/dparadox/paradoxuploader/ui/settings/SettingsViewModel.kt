@@ -1,5 +1,6 @@
 package com.dparadox.paradoxuploader.ui.settings
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,12 +23,14 @@ import com.dparadox.paradoxuploader.domain.repository.SettingsRepository
 import com.dparadox.paradoxuploader.domain.repository.UploadRepository
 import com.dparadox.paradoxuploader.domain.util.IdentifierGenerator
 import com.dparadox.paradoxuploader.domain.util.UpdateChecker
+import com.dparadox.paradoxuploader.ui.util.UpdateDownloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 sealed interface KeyUiState {
@@ -51,6 +54,12 @@ sealed interface UpdateUiState {
     data class Failed(val reason: String? = null) : UpdateUiState
 }
 
+sealed interface UpdateDownloadUiState {
+    data object Idle : UpdateDownloadUiState
+    data object Downloading : UpdateDownloadUiState
+    data class Failed(val reason: String) : UpdateDownloadUiState
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
@@ -59,10 +68,14 @@ class SettingsViewModel @Inject constructor(
     private val history: HistoryRepository,
     private val folders: FolderRepository,
     private val cleanup: CleanupRepository,
-    private val updates: UpdateChecker
+    private val updates: UpdateChecker,
+    private val httpClient: OkHttpClient
 ) : ViewModel() {
 
     var updateState by mutableStateOf<UpdateUiState>(UpdateUiState.Idle)
+        private set
+
+    var updateDownloadState by mutableStateOf<UpdateDownloadUiState>(UpdateDownloadUiState.Idle)
         private set
 
     fun checkForUpdates() {
@@ -73,6 +86,19 @@ class SettingsViewModel @Inject constructor(
                 UpdateCheckResult.UpToDate -> UpdateUiState.UpToDate
                 is UpdateCheckResult.Available -> UpdateUiState.Available(result.info)
                 is UpdateCheckResult.Failed -> UpdateUiState.Failed(result.reason)
+            }
+        }
+    }
+
+    /** Downloads the release .apk in the background, then hands it to the system installer. */
+    fun downloadUpdateInApp(context: Context, apkUrl: String) {
+        if (updateDownloadState is UpdateDownloadUiState.Downloading) return
+        viewModelScope.launch {
+            updateDownloadState = UpdateDownloadUiState.Downloading
+            when (val result = UpdateDownloader.downloadAndInstall(context.applicationContext, httpClient, apkUrl)) {
+                is UpdateDownloader.Result.Failed -> updateDownloadState = UpdateDownloadUiState.Failed(result.reason)
+                UpdateDownloader.Result.Installing,
+                UpdateDownloader.Result.NeedsInstallPermission -> updateDownloadState = UpdateDownloadUiState.Idle
             }
         }
     }

@@ -779,6 +779,8 @@ private fun CleanupSection(viewModel: SettingsViewModel, autoRemove: Boolean) {
 private fun UpdatesSection(viewModel: SettingsViewModel, autoCheck: Boolean) {
     val context = LocalContext.current
     val state = viewModel.updateState
+    val downloadState = viewModel.updateDownloadState
+    var showDownloadChoice by remember { mutableStateOf(false) }
 
     Section(stringResource(R.string.settings_updates)) {
         SettingSwitch(
@@ -823,8 +825,66 @@ private fun UpdatesSection(viewModel: SettingsViewModel, autoCheck: Boolean) {
                 if (state.info.notes.isNotBlank()) {
                     Text(state.info.notes, style = MaterialTheme.typography.bodySmall)
                 }
-                Button(onClick = { UiActions.open(context, state.info.url) }) {
+                Button(
+                    onClick = { showDownloadChoice = true },
+                    enabled = downloadState !is UpdateDownloadUiState.Downloading
+                ) {
                     Text(stringResource(R.string.update_download))
+                }
+                if (downloadState is UpdateDownloadUiState.Downloading) {
+                    ParadoxProgress(progress = null)
+                    Text(stringResource(R.string.update_downloading), style = MaterialTheme.typography.bodySmall)
+                }
+                if (downloadState is UpdateDownloadUiState.Failed) {
+                    Text(
+                        stringResource(R.string.update_download_failed, downloadState.reason),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                if (showDownloadChoice) {
+                    AlertDialog(
+                        onDismissRequest = { showDownloadChoice = false },
+                        title = { Text(stringResource(R.string.update_download_choice_title)) },
+                        text = {
+                            Column {
+                                TextButton(onClick = {
+                                    showDownloadChoice = false
+                                    UiActions.open(context, state.info.url)
+                                }) {
+                                    Column {
+                                        Text(stringResource(R.string.update_download_github))
+                                        Text(
+                                            stringResource(R.string.update_download_github_hint),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                val apkUrl = state.info.apkUrl
+                                TextButton(
+                                    onClick = {
+                                        showDownloadChoice = false
+                                        if (apkUrl != null) viewModel.downloadUpdateInApp(context, apkUrl)
+                                    },
+                                    enabled = apkUrl != null
+                                ) {
+                                    Column {
+                                        Text(stringResource(R.string.update_download_in_app))
+                                        Text(
+                                            stringResource(R.string.update_download_in_app_hint),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            TextButton(onClick = { showDownloadChoice = false }) {
+                                Text(stringResource(R.string.cancel))
+                            }
+                        }
+                    )
                 }
             }
             else -> Unit

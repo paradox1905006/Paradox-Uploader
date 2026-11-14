@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -66,11 +67,29 @@ class OkHttpUpdateService @Inject constructor(
         } catch (e: IllegalArgumentException) {
             return ApiResult.Failure(ErrorKind.UNKNOWN, null, "Unreadable update response")
         }
-        val version = obj.text("versionName", "tag_name", "version")
+        // A GitHub "latest release" response has its own "url" field pointing at the API
+        // endpoint (not a page a person should open), so the two shapes must be told apart
+        // instead of just trying "url" then "html_url" in order.
+        val isGithubRelease = obj.containsKey("tag_name")
+        val version = (if (isGithubRelease) obj.text("tag_name") else obj.text("versionName", "version"))
+            ?.removePrefix("V")?.removePrefix("v")
             ?: return ApiResult.Failure(ErrorKind.UNKNOWN, null, "No version in update response")
-        val link = obj.text("url", "html_url") ?: return ApiResult.Failure(ErrorKind.UNKNOWN, null, "No link")
-        val notes = obj.text("notes", "body").orEmpty().take(600)
-        return ApiResult.Success(UpdateInfo(version, link, notes))
+        val link = (if (isGithubRelease) obj.text("html_url") else obj.text("url"))
+            ?: return ApiResult.Failure(ErrorKind.UNKNOWN, null, "No link")
+        val notes = (if (isGithubRelease) obj.text("body") else obj.text("notes")).orEmpty().take(600)
+        val apkUrl = if (isGithubRelease) apkAssetUrl(obj) else obj.text("apkUrl", "apk_url")
+        return ApiResult.Success(UpdateInfo(version, link, notes, apkUrl))
+    }
+
+    /** Finds the first .apk release asset's direct download link in a GitHub release response. */
+    private fun apkAssetUrl(obj: JsonObject): String? {
+        val assets = obj["assets"] as? JsonArray ?: return null
+        return assets.firstNotNullOfOrNull { element ->
+            val asset = element as? JsonObject ?: return@firstNotNullOfOrNull null
+            val name = (asset["name"] as? JsonPrimitive)?.contentOrNull ?: return@firstNotNullOfOrNull null
+            if (!name.endsWith(".apk", ignoreCase = true)) return@firstNotNullOfOrNull null
+            (asset["browser_download_url"] as? JsonPrimitive)?.contentOrNull
+        }
     }
 
     private fun JsonObject.text(vararg keys: String): String? =
