@@ -27,7 +27,19 @@ sealed interface AuthState {
     data object Initializing : AuthState
     data object NeedsApiCredentials : AuthState
     data object WaitPhone : AuthState
-    data class WaitCode(val phone: String) : AuthState
+    /**
+     * Waiting for the login code. [channel] is where Telegram sent it, [nextChannel] is what a resend would use
+     * (null = cannot resend), [timeoutSeconds] is how long to wait before a resend is allowed, counted from
+     * [issuedAtMillis]. [codeLength] is 0 when unknown.
+     */
+    data class WaitCode(
+        val phone: String,
+        val channel: CodeChannel = CodeChannel.OTHER,
+        val nextChannel: CodeChannel? = null,
+        val timeoutSeconds: Int = 0,
+        val codeLength: Int = 0,
+        val issuedAtMillis: Long = System.currentTimeMillis()
+    ) : AuthState
     data class WaitPassword(val hint: String) : AuthState
     data class Ready(val account: Account?) : AuthState
     data object LoggingOut : AuthState
@@ -35,6 +47,9 @@ sealed interface AuthState {
 }
 
 enum class ConnectionStatus { CONNECTED, CONNECTING, WAITING_FOR_NETWORK }
+
+/** How Telegram delivers a login code. */
+enum class CodeChannel { TELEGRAM_APP, SMS, CALL, OTHER }
 
 enum class FileKind { DOCUMENT, VIDEO, AUDIO, IMAGE, APK, ARCHIVE, VOICE, ANIMATION, OTHER }
 

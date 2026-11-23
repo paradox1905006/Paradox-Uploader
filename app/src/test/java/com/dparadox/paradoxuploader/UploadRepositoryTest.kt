@@ -242,10 +242,17 @@ class UploadRepositoryTest {
         assertEquals(UploadStatus.PROCESSING, dao.get(id)!!.status)
     }
 
-    @Test fun pollNeedsTheHeadRequestToSucceedToo() = runTest {
+    // The /download/ HEAD check is unreliable for brand-new files, so being listed with the right size is enough.
+    @Test fun pollIsReadyOnceListedWithTheRightSize() = runTest {
         val id = insertProcessing()
         api.metadata = ApiResult.Success(listOf(RemoteFile("file.txt", 10, null, null)))
         api.downloadable = ApiResult.Success(false)
+        assertTrue(repo.runPoll(id) is PollOutcome.Ready)
+    }
+
+    @Test fun pollKeepsWaitingWhileTheListedSizeIsWrong() = runTest {
+        val id = insertProcessing()
+        api.metadata = ApiResult.Success(listOf(RemoteFile("file.txt", 3, null, null)))
         assertTrue(repo.runPoll(id) is PollOutcome.Pending)
     }
 
@@ -275,7 +282,8 @@ class UploadRepositoryTest {
         clock.now += 20 * 60_000
         assertEquals(PollOutcome.Pending(120_000L), repo.runPoll(id))
         clock.now += 61 * 60_000
-        assertEquals(PollOutcome.Delayed, repo.runPoll(id))
+        // After the normal schedule the file shows as DELAYED but is still re-checked every 30 minutes.
+        assertEquals(PollOutcome.Pending(30 * 60_000L), repo.runPoll(id))
         assertEquals(UploadStatus.DELAYED, dao.get(id)!!.status)
     }
 
@@ -348,6 +356,38 @@ class UploadRepositoryTest {
         repo.resumePending()
         assertEquals(listOf(uploadId), scheduler.uploads)
         assertTrue(scheduler.polls.any { it.first == pollId })
+    }
+
+    @Test fun resumePendingAlsoRechecksDelayedFiles() = runTest {
+        val id = insertProcessing(startedAt = clock.now)
+        clock.now += 2 * 60 * 60_000
+        repo.runPoll(id)
+        scheduler.polls.clear()
+        repo.resumePending()
+        assertTrue(scheduler.polls.any { it.first == id })
+    }
+
+    @Test fun theSameSourceIsNotQueuedTwice() = runTest {
+        repo.enqueue(listOf("content://doc/1"), UploadMeta())
+        val second = repo.enqueue(listOf("content://doc/1"), UploadMeta())
+        assertEquals(0, second.queued)
+        assertEquals(1, second.skipped)
+        assertEquals(1, dao.getAll().size)
+    }
+
+    @Test fun aDifferentFileWithTheSameNameGoesToItsOwnItem() = runTest {
+        repo.enqueue(listOf("content://doc/1"), UploadMeta())
+        val second = repo.enqueue(listOf("content://doc/2"), UploadMeta())
+        assertEquals(1, second.queued)
+        assertEquals(2, dao.getAll().map { it.identifier }.distinct().size)
+    }
+
+    @Test fun sameNameAndSizeIntoTheSameFixedItemIsSkipped() = runTest {
+        settings.flow.value = AppSettings(identifierMode = IdentifierMode.FIXED, fixedIdentifier = "my-fixed_item")
+        repo.enqueue(listOf("content://doc/1"), UploadMeta())
+        val second = repo.enqueue(listOf("content://doc/2"), UploadMeta())
+        assertEquals(0, second.queued)
+        assertEquals(1, dao.getAll().size)
     }
 
     private val cc = "https://creativecommons.org/licenses/by/4.0/"

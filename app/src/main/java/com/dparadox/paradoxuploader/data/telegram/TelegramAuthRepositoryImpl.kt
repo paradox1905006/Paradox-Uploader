@@ -45,6 +45,27 @@ class TelegramAuthRepositoryImpl @Inject constructor(
         Unit
     }
 
+    override suspend fun resendCode() = tgCall {
+        td.send(newResendFunction())
+        Unit
+    }
+
+    /**
+     * Newer TDLib builds take a ResendCodeReason, older ones take no argument. Build whichever this
+     * TDLib has, so the app compiles and works against both.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun newResendFunction(): TdApi.Function<TdApi.Ok> {
+        val cls = TdApi.ResendAuthenticationCode::class.java
+        val withReason = cls.constructors.firstOrNull { it.parameterTypes.size == 1 }
+        if (withReason != null) {
+            val reason = Class.forName("org.drinkless.tdlib.TdApi\$ResendCodeReasonUserRequest")
+                .getDeclaredConstructor().newInstance()
+            return withReason.newInstance(reason) as TdApi.Function<TdApi.Ok>
+        }
+        return cls.getDeclaredConstructor().newInstance() as TdApi.Function<TdApi.Ok>
+    }
+
     override suspend fun submitPassword(password: String) = tgCall {
         td.send(TdApi.CheckAuthenticationPassword(password))
         Unit

@@ -814,7 +814,7 @@ private fun formatBytes(bytes: Long): String {
 }
 
 private fun openLink(context: Context, link: String) {
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    com.dparadox.paradoxuploader.ui.util.UiActions.open(context, link)
 }
 
 private fun shareLink(context: Context, link: String) {

@@ -71,12 +71,12 @@ class UploadService : Service() {
     private fun notifyProgress(active: List<UploadJob>) {
         val uploading = active.firstOrNull { it.status == UploadStatus.UPLOADING }
         val text = if (uploading != null) {
-            val pct = if (uploading.sizeBytes > 0) (uploading.uploadedBytes * 100 / uploading.sizeBytes).toInt() else 0
+            val pct = if (uploading.sizeBytes > 0) (uploading.uploadedBytes * 100 / uploading.sizeBytes).toInt().coerceIn(0, 100) else 0
             "${uploading.fileName} · $pct% · ${active.size} in queue"
         } else {
             "${active.size} waiting"
         }
-        val pct = uploading?.let { if (it.sizeBytes > 0) (it.uploadedBytes * 100 / it.sizeBytes).toInt() else 0 }
+        val pct = uploading?.let { if (it.sizeBytes > 0) (it.uploadedBytes * 100 / it.sizeBytes).toInt().coerceIn(0, 100) else 0 }
         try {
             NotificationManagerCompat.from(this).notify(NOTIF_ID, build(text, pct))
         } catch (_: SecurityException) {

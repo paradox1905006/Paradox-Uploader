@@ -1,6 +1,6 @@
 {
-  "versionName": "1.7.0",
-  "url": "https://github.com/paradox1905006/Paradox-Uploader/releases/tag/V1.7.0",
-  "apkUrl": "https://github.com/paradox1905006/Paradox-Uploader/releases/download/V1.7.0/app-release.apk",
-  "notes": "Bug fixes and improvements."
+  "versionName": "1.7.1",
+  "url": "https://github.com/paradox1905006/Paradox-Uploader/releases/tag/V1.7.1",
+  "apkUrl": "https://github.com/paradox1905006/Paradox-Uploader/releases/download/V1.7.1/app-release.apk",
+  "notes": "Bug fixes: cancelling a Telegram upload now really stops it, duplicate-file detection no longer skips different files, safer in-app updates and fewer crashes."
 }

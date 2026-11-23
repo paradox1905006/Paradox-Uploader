@@ -31,6 +31,16 @@
     <string name="tg_otp_label">Login code</string>
     <string name="tg_verify">Verify</string>
     <string name="tg_use_other_number">Use a different number</string>
+    <string name="tg_otp_via_app">Telegram sent the code to your Telegram app on another device (open the “Telegram” chat) for %1$s. It is not an SMS.</string>
+    <string name="tg_otp_via_sms">Telegram sent the code by SMS to %1$s.</string>
+    <string name="tg_otp_via_call">Telegram will call %1$s and read the code out.</string>
+    <string name="tg_resend">Resend code</string>
+    <string name="tg_resend_in">Resend code in %1$s</string>
+    <string name="tg_resend_via_sms">Resend code by SMS</string>
+    <string name="tg_resend_via_call">Get the code by phone call</string>
+    <string name="tg_resend_via_app">Resend code to Telegram app</string>
+    <string name="tg_resend_none">No other way to send the code right now. Wait a while or use a different number.</string>
+    <string name="tg_change_api">Change API id / hash</string>
 
     <!-- 2FA -->
     <string name="tg_2fa_title">Two-step verification</string>
@@ -132,6 +142,10 @@
     <string name="tg_err_code_expired">The code expired. Go back and request a new one.</string>
     <string name="tg_err_password">Wrong password.</string>
     <string name="tg_err_auth_other">Telegram refused this sign-in.</string>
+    <string name="tg_err_api_invalid">Telegram rejected this API id / hash. Copy both again from my.telegram.org → API development tools.</string>
+    <string name="tg_err_api_blocked">Telegram blocked this API id. Create a new app at my.telegram.org and use the new id and hash.</string>
+    <string name="tg_err_phone_flood">Too many code requests for this number. Wait a few hours and try again.</string>
+    <string name="tg_err_code_unavailable">Telegram can\'t send another code right now. Wait a while or use a different number.</string>
     <string name="tg_err_mtproto">Telegram error %1$d: %2$s</string>
     <string name="tg_err_unknown">Something went wrong. %1$s</string>
 </resources>

@@ -3,7 +3,11 @@ package com.dparadox.paradoxuploader.domain.telegram
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
-enum class AuthFailure { PHONE_INVALID, CODE_INVALID, CODE_EXPIRED, PASSWORD_INVALID, OTHER }
+enum class AuthFailure {
+    PHONE_INVALID, CODE_INVALID, CODE_EXPIRED, PASSWORD_INVALID,
+    API_INVALID, API_BLOCKED, PHONE_FLOOD, CODE_UNAVAILABLE,
+    OTHER
+}
 
 sealed interface TgError {
     data object EmptyLink : TgError

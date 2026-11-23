@@ -199,7 +199,9 @@ class UploadControllerImpl @Inject constructor(
                 val err: TgError = if (e is StorageException) TgError.Unknown(e.message) else e.toTgError()
                 mutate(job.id) { it.copy(status = UploadStatus.FAILED, error = err, speedBps = 0.0, etaSeconds = null) }
             } finally {
-                staged?.let { f -> f.delete(); f.parentFile?.delete() }
+                // Remove the whole per-job folder: a cancel during the copy left a partial file behind.
+                staged?.delete()
+                File(File(context.cacheDir, "upload_staging"), job.id).deleteRecursively()
             }
         }
         currentJobId = job.id

@@ -11,6 +11,7 @@ interface TelegramAuthRepository {
     suspend fun saveApiCredentials(credentials: ApiCredentials): TgResult<Unit>
     suspend fun submitPhone(phone: String): TgResult<Unit>
     suspend fun submitCode(code: String): TgResult<Unit>
+    suspend fun resendCode(): TgResult<Unit>
     suspend fun submitPassword(password: String): TgResult<Unit>
     suspend fun logout(): TgResult<Unit>
     suspend fun clearCache(): TgResult<Unit>

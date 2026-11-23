@@ -130,7 +130,7 @@ class UploadViewModel @Inject constructor(
     // ------------------------------------------------------------ Files
 
     fun addFiles(uris: List<Uri>) = viewModelScope.launch {
-        val picked = withContext(Dispatchers.IO) { uris.mapNotNull { readPicked(it) } }
+        val picked = withContext(Dispatchers.IO) { uris.mapNotNull { runCatching { readPicked(it) }.getOrNull() } }
         _files.update { current -> current + picked.filterNot { p -> current.any { it.uri == p.uri } } }
     }
 

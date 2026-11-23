@@ -66,6 +66,7 @@ class TelegramAuthViewModel @Inject constructor(
 
     fun phone(phone: String) = launchOp { signIn(phone) }
     fun code(code: String) = launchOp { submitCode(code) }
+    fun resend() = launchOp { repo.resendCode() }
     fun password(password: String) = launchOp { submitPassword(password) }
 
     /** Goes back to the phone step (e.g. wrong number): logs out the pending login. */

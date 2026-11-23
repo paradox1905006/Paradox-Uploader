@@ -10,7 +10,16 @@ class SignInWithPhone @Inject constructor(private val repo: TelegramAuthReposito
         if (cleaned.count { it.isDigit() } < 6) {
             return TgResult.Failure(TgError.AuthFailed(AuthFailure.PHONE_INVALID))
         }
-        return repo.submitPhone(if (cleaned.startsWith("+")) cleaned else "+$cleaned")
+        return repo.submitPhone(normalize(cleaned))
+    }
+
+    /** Telegram only accepts international format. Fix the common local/00 forms instead of sending a bad number. */
+    private fun normalize(cleaned: String): String = when {
+        cleaned.startsWith("+") -> "+" + cleaned.drop(1).filter(Char::isDigit)
+        cleaned.startsWith("00") -> "+" + cleaned.drop(2)
+        // Bangladesh local mobile format: 01XXXXXXXXX -> +8801XXXXXXXXX
+        cleaned.length == 11 && cleaned.startsWith("01") -> "+880" + cleaned.drop(1)
+        else -> "+$cleaned"
     }
 }
 

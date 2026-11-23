@@ -13,7 +13,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Lock
@@ -33,6 +35,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,12 +55,17 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dparadox.paradoxuploader.R
+import com.dparadox.paradoxuploader.domain.telegram.AuthFailure
 import com.dparadox.paradoxuploader.domain.telegram.AuthState
+import com.dparadox.paradoxuploader.domain.telegram.CodeChannel
+import com.dparadox.paradoxuploader.domain.telegram.ConnectionStatus
+import com.dparadox.paradoxuploader.domain.telegram.TgError
 import com.dparadox.paradoxuploader.ui.components.BannerTone
 import com.dparadox.paradoxuploader.ui.components.FieldShape
 import com.dparadox.paradoxuploader.ui.components.InfoBanner
 import com.dparadox.paradoxuploader.ui.components.PrimaryButton
 import com.dparadox.paradoxuploader.ui.util.UiActions
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
@@ -65,11 +75,23 @@ fun LoginScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
     var phone by rememberSaveable { mutableStateOf("") }
     var apiId by rememberSaveable { mutableStateOf("") }
     var apiHash by rememberSaveable { mutableStateOf("") }
-    val needsApi = auth is AuthState.NeedsApiCredentials
+    var editApi by rememberSaveable { mutableStateOf(false) }
+    val connection by vm.connection.collectAsStateWithLifecycle()
+    val needsApi = auth is AuthState.NeedsApiCredentials || editApi
+
+    // Telegram says the API id/hash is wrong or blocked: let the user re-enter them right here.
+    LaunchedEffect(ui.error) {
+        val e = ui.error
+        if (e is TgError.AuthFailed && (e.reason == AuthFailure.API_INVALID || e.reason == AuthFailure.API_BLOCKED)) {
+            editApi = true
+        }
+    }
 
     TgScaffold(stringResource(R.string.tg_login_title)) { padding ->
         TgForm(padding) {
             TgHeader(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.tg_login_body))
+
+            ConnectionBanner(connection)
 
             if (auth is AuthState.Unsupported) {
                 InfoBanner(
@@ -100,7 +122,10 @@ fun LoginScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
                 )
                 PrimaryButton(
                     text = stringResource(R.string.tg_api_save),
-                    onClick = { vm.saveApi(apiId, apiHash) },
+                    onClick = {
+                        vm.saveApi(apiId, apiHash)
+                        if ((apiId.toIntOrNull() ?: 0) > 0 && apiHash.trim().length >= 16) editApi = false
+                    },
                     loading = ui.busy,
                     icon = Icons.Rounded.Save
                 )
@@ -128,6 +153,9 @@ fun LoginScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
                     enabled = auth is AuthState.WaitPhone,
                     loading = ui.busy || auth is AuthState.Initializing
                 )
+                TextButton(onClick = { editApi = true }, enabled = !ui.busy) {
+                    Text(stringResource(R.string.tg_change_api))
+                }
             }
             ui.error?.let { ErrorCard(it) }
         }
@@ -139,16 +167,38 @@ fun OtpScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
     val auth by vm.authState.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
     var code by rememberSaveable { mutableStateOf("") }
-    val phone = (auth as? AuthState.WaitCode)?.phone.orEmpty()
+    val connection by vm.connection.collectAsStateWithLifecycle()
+    val wait = auth as? AuthState.WaitCode
+    val phone = wait?.phone.orEmpty()
+    val autoSubmitLength = wait?.codeLength?.takeIf { it > 0 } ?: 5
+
+    // Ticks once a second so the resend countdown is always measured from when Telegram issued the code.
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(wait?.issuedAtMillis) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+    val secondsLeft = wait?.let { (it.timeoutSeconds - (now - it.issuedAtMillis) / 1000).toInt().coerceAtLeast(0) } ?: 0
 
     TgScaffold(stringResource(R.string.tg_otp_title)) { padding ->
         TgForm(padding) {
-            TgHeader(Icons.Rounded.Sms, stringResource(R.string.tg_otp_body, phone))
+            ConnectionBanner(connection)
+            TgHeader(
+                Icons.Rounded.Sms,
+                when (wait?.channel) {
+                    CodeChannel.TELEGRAM_APP -> stringResource(R.string.tg_otp_via_app, phone)
+                    CodeChannel.SMS -> stringResource(R.string.tg_otp_via_sms, phone)
+                    CodeChannel.CALL -> stringResource(R.string.tg_otp_via_call, phone)
+                    else -> stringResource(R.string.tg_otp_body, phone)
+                }
+            )
             OutlinedTextField(
                 value = code,
                 onValueChange = {
                     code = it.filter(Char::isDigit).take(8)
-                    if (code.length == 5 && !ui.busy) vm.code(code)
+                    if (code.length == autoSubmitLength && !ui.busy) vm.code(code)
                 },
                 label = { Text(stringResource(R.string.tg_otp_label)) },
                 textStyle = MaterialTheme.typography.headlineSmall.copy(letterSpacing = 6.sp),
@@ -163,12 +213,52 @@ fun OtpScreen(vm: TelegramAuthViewModel = hiltViewModel()) {
                 enabled = code.length >= 4,
                 loading = ui.busy
             )
+            val next = wait?.nextChannel
+            OutlinedButton(
+                onClick = { code = ""; vm.resend() },
+                enabled = next != null && secondsLeft == 0 && !ui.busy,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+            ) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    when {
+                        next != null && secondsLeft > 0 -> stringResource(R.string.tg_resend_in, formatSeconds(secondsLeft))
+                        next == CodeChannel.SMS -> stringResource(R.string.tg_resend_via_sms)
+                        next == CodeChannel.CALL -> stringResource(R.string.tg_resend_via_call)
+                        next == CodeChannel.TELEGRAM_APP -> stringResource(R.string.tg_resend_via_app)
+                        else -> stringResource(R.string.tg_resend)
+                    }
+                )
+            }
+            if (wait != null && next == null && secondsLeft == 0) {
+                Text(
+                    stringResource(R.string.tg_resend_none),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             TextButton(onClick = vm::useDifferentNumber, enabled = !ui.busy) {
                 Text(stringResource(R.string.tg_use_other_number))
             }
             ui.error?.let { ErrorCard(it) }
         }
     }
+}
+
+private fun formatSeconds(total: Int): String = "%d:%02d".format(total / 60, total % 60)
+
+/** Shown while TDLib cannot reach Telegram: a code can't be sent until it is connected. */
+@Composable
+private fun ConnectionBanner(status: ConnectionStatus) {
+    if (status == ConnectionStatus.CONNECTED) return
+    InfoBanner(
+        icon = Icons.Rounded.CloudOff,
+        title = stringResource(
+            if (status == ConnectionStatus.WAITING_FOR_NETWORK) R.string.tg_waiting_network else R.string.tg_connecting
+        ),
+        tone = BannerTone.NEUTRAL
+    )
 }
 
 @Composable

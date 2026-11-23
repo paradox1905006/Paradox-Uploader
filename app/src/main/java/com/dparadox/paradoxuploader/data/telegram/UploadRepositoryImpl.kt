@@ -9,7 +9,10 @@ import com.dparadox.paradoxuploader.domain.telegram.TgError
 import com.dparadox.paradoxuploader.domain.telegram.TgResult
 import com.dparadox.paradoxuploader.domain.telegram.UploadRepository
 import com.dparadox.paradoxuploader.domain.telegram.tgCall
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -106,7 +109,7 @@ class UploadRepositoryImpl @Inject constructor(
             ?: throw TelegramException(TgError.Unknown("Telegram did not return an upload id"))
         onFileId(fileId)
 
-        val outcome = coroutineScope {
+        val outcome = try { coroutineScope {
             // Progress and send results arrive as updates. Progress runs only while we wait for the outcome.
             val progress = launch(start = CoroutineStart.UNDISPATCHED) {
                 td.fileUpdates.filter { it.file.id == fileId }.collect { u ->
@@ -120,6 +123,13 @@ class UploadRepositoryImpl @Inject constructor(
             }
             progress.cancel()
             result
+        } } catch (e: CancellationException) {
+            // Deleting a message that is still being sent is how TDLib cancels the upload. Without
+            // this, a "cancelled" file kept uploading and was still posted to the chat.
+            withContext(NonCancellable) {
+                runCatching { td.send(TdApi.DeleteMessages(chatId, longArrayOf(temp.id), true)) }
+            }
+            throw e
         }
 
         when (outcome) {
@@ -130,7 +140,8 @@ class UploadRepositoryImpl @Inject constructor(
                 SentMessage(outcome.message.id, link)
             }
             is TdApi.UpdateMessageSendFailed ->
-                throw TelegramException(TgError.Unknown("Telegram rejected the upload"))
+                throw outcome.error?.let { TdErrors.map(it) }
+                    ?: TelegramException(TgError.Unknown("Telegram rejected the upload"))
             else -> throw TelegramException(TgError.Unknown("Unexpected send result"))
         }
     }

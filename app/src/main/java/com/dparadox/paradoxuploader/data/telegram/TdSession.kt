@@ -7,6 +7,7 @@ import com.dparadox.paradoxuploader.di.ApplicationScope
 import com.dparadox.paradoxuploader.domain.telegram.Account
 import com.dparadox.paradoxuploader.domain.telegram.ApiCredentials
 import com.dparadox.paradoxuploader.domain.telegram.AuthState
+import com.dparadox.paradoxuploader.domain.telegram.CodeChannel
 import com.dparadox.paradoxuploader.domain.telegram.ConnectionStatus
 import com.dparadox.paradoxuploader.domain.telegram.TelegramException
 import com.dparadox.paradoxuploader.domain.telegram.TgError
@@ -118,7 +119,16 @@ class TdSession @Inject constructor(
         when (state) {
             is TdApi.AuthorizationStateWaitTdlibParameters -> sendParameters()
             is TdApi.AuthorizationStateWaitPhoneNumber -> _auth.value = AuthState.WaitPhone
-            is TdApi.AuthorizationStateWaitCode -> _auth.value = AuthState.WaitCode(state.codeInfo.phoneNumber.orEmpty())
+            is TdApi.AuthorizationStateWaitCode -> {
+                val info = state.codeInfo
+                _auth.value = AuthState.WaitCode(
+                    phone = info.phoneNumber.orEmpty(),
+                    channel = channelOf(info.type),
+                    nextChannel = info.nextType?.let(::channelOf),
+                    timeoutSeconds = info.timeout,
+                    codeLength = codeLengthOf(info.type)
+                )
+            }
             is TdApi.AuthorizationStateWaitPassword -> _auth.value = AuthState.WaitPassword(state.passwordHint.orEmpty())
             is TdApi.AuthorizationStateReady -> {
                 _auth.value = AuthState.Ready(account)
@@ -135,6 +145,20 @@ class TdSession @Inject constructor(
             else -> _auth.value = AuthState.Unsupported(state.javaClass.simpleName.removePrefix("AuthorizationState"))
         }
     }
+
+    // Matched by class name so this keeps compiling when TDLib adds new code types (SmsWord, SmsPhrase, ...).
+    private fun channelOf(type: TdApi.Object): CodeChannel {
+        val n = type.javaClass.simpleName
+        return when {
+            n.contains("TelegramMessage") -> CodeChannel.TELEGRAM_APP
+            n.contains("Sms") -> CodeChannel.SMS
+            n.contains("Call") -> CodeChannel.CALL
+            else -> CodeChannel.OTHER
+        }
+    }
+
+    private fun codeLengthOf(type: TdApi.Object): Int =
+        runCatching { type.javaClass.getField("length").getInt(type) }.getOrDefault(0)
 
     private fun sendParameters() {
         synchronized(lock) {

@@ -58,6 +58,10 @@ fun tgErrorText(error: TgError): String = when (error) {
             AuthFailure.CODE_INVALID -> R.string.tg_err_code
             AuthFailure.CODE_EXPIRED -> R.string.tg_err_code_expired
             AuthFailure.PASSWORD_INVALID -> R.string.tg_err_password
+            AuthFailure.API_INVALID -> R.string.tg_err_api_invalid
+            AuthFailure.API_BLOCKED -> R.string.tg_err_api_blocked
+            AuthFailure.PHONE_FLOOD -> R.string.tg_err_phone_flood
+            AuthFailure.CODE_UNAVAILABLE -> R.string.tg_err_code_unavailable
             AuthFailure.OTHER -> R.string.tg_err_auth_other
         }
     )

@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Downloads a release .apk in the background and hands it to the system installer. */
 object UpdateDownloader {
@@ -24,6 +25,9 @@ object UpdateDownloader {
 
     suspend fun downloadAndInstall(context: Context, client: OkHttpClient, apkUrl: String): Result =
         withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "updates").apply { mkdirs() }
+            val file = File(dir, "update.apk")
+            val partial = File(dir, "update.apk.part")
             try {
                 val request = Request.Builder().url(apkUrl).build()
                 client.newCall(request).execute().use { response ->
@@ -31,14 +35,31 @@ object UpdateDownloader {
                         return@withContext Result.Failed("HTTP ${response.code}")
                     }
                     val body = response.body ?: return@withContext Result.Failed("Empty response")
-                    val dir = File(context.cacheDir, "updates").apply { mkdirs() }
-                    val file = File(dir, "update.apk")
+                    // Write to a temp file first: an interrupted download must never be handed to the installer.
                     body.byteStream().use { input ->
-                        file.outputStream().use { output -> input.copyTo(output) }
+                        partial.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    val expected = body.contentLength()
+                    if (expected > 0 && partial.length() != expected) {
+                        partial.delete()
+                        return@withContext Result.Failed("Download incomplete")
+                    }
+                    file.delete()
+                    if (!partial.renameTo(file)) {
+                        partial.delete()
+                        return@withContext Result.Failed("Could not save the update")
                     }
                     withContext(Dispatchers.Main) { launchInstall(context, file) }
                 }
+            } catch (e: CancellationException) {
+                partial.delete()
+                throw e
             } catch (e: IOException) {
+                partial.delete()
+                Result.Failed(e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
+            } catch (e: Exception) {
+                // Bad URL in update.json, no installer on the device, etc.: report it instead of crashing.
+                partial.delete()
                 Result.Failed(e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
             }
         }

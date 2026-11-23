@@ -17,11 +17,15 @@ object TdErrors {
             m.contains("FLOOD_WAIT") || m.contains("RETRY AFTER") ->
                 if (seconds != null) TgError.FloodWait(seconds) else TgError.RateLimited
             code == 429 || code == 420 -> if (seconds != null) TgError.FloodWait(seconds) else TgError.RateLimited
+            m.contains("API_ID_PUBLISHED_FLOOD") -> TgError.AuthFailed(AuthFailure.API_BLOCKED)
+            m.contains("API_ID_INVALID") || m.contains("API_HASH_INVALID") -> TgError.AuthFailed(AuthFailure.API_INVALID)
+            m.contains("SEND_CODE_UNAVAILABLE") || m.contains("BE RESENT") -> TgError.AuthFailed(AuthFailure.CODE_UNAVAILABLE)
             m.contains("PHONE_NUMBER_INVALID") -> TgError.AuthFailed(AuthFailure.PHONE_INVALID)
             m.contains("PHONE_CODE_INVALID") || m.contains("PHONE_CODE_EMPTY") -> TgError.AuthFailed(AuthFailure.CODE_INVALID)
             m.contains("PHONE_CODE_EXPIRED") -> TgError.AuthFailed(AuthFailure.CODE_EXPIRED)
             m.contains("PASSWORD_HASH_INVALID") || m.contains("PASSWORD_INVALID") -> TgError.AuthFailed(AuthFailure.PASSWORD_INVALID)
-            m.contains("PHONE_NUMBER_BANNED") || m.contains("PHONE_NUMBER_FLOOD") -> TgError.AuthFailed(AuthFailure.OTHER)
+            m.contains("PHONE_NUMBER_FLOOD") -> TgError.AuthFailed(AuthFailure.PHONE_FLOOD)
+            m.contains("PHONE_NUMBER_BANNED") -> TgError.AuthFailed(AuthFailure.OTHER)
             m.contains("AUTH_KEY") || m.contains("SESSION_REVOKED") || m.contains("SESSION_EXPIRED") ||
                 m.contains("USER_DEACTIVATED") -> TgError.SessionExpired
             code == 401 -> TgError.SessionExpired

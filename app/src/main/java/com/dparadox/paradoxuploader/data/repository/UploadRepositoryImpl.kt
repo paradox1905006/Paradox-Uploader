@@ -102,11 +102,18 @@ class UploadRepositoryImpl @Inject constructor(
                     else -> IdentifierGenerator.newItem()
                 }
                 var fileName = ArchiveUrls.sanitizeFileName(info.name)
-                // Same name + size already active or completed: do not queue it a second time.
-                val alreadyTracked = dao.getAll().any {
-                    it.fileName == fileName && it.sizeBytes == info.sizeBytes && it.status != UploadStatus.FAILED
+                // Skip a real duplicate only: the same source already queued, or the same name + size
+                // going into the same archive.org item (it would overwrite itself). Different files that
+                // just share a name/size, or a file sent to a new item, must still be queued.
+                val existing = dao.getAll()
+                val alreadyTracked = existing.any {
+                    it.status != UploadStatus.FAILED && (
+                        (it.sourceUri != null && (it.sourceUri == uri || it.sourceUri == kept)) ||
+                            (it.identifier == identifier && it.fileName == fileName && it.sizeBytes == info.sizeBytes)
+                        )
                 }
                 if (alreadyTracked && folder == null) {
+                    if (kept != uri) sources.release(kept)
                     skipped++
                     continue
                 }
@@ -381,7 +388,7 @@ class UploadRepositoryImpl @Inject constructor(
                 scheduler.enqueueUpload(it.id, current.wifiOnly, replace = false, chargingOnly = current.chargingOnly)
             }
         }
-        dao.getByStatus(listOf(UploadStatus.PROCESSING)).forEach {
+        dao.getByStatus(listOf(UploadStatus.PROCESSING, UploadStatus.DELAYED)).forEach {
             scheduler.enqueuePoll(it.id, 0L, 0, replace = false)
         }
     }

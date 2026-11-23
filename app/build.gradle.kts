@@ -21,8 +21,8 @@ android {
         applicationId = "com.dparadox.paradoxuploader"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.7.0"
+        versionCode = 7
+        versionName = "1.7.1"
         // Where the app looks for new versions. NOTE: api.github.com enforces a 60 requests/hour
         // limit PER IP for anonymous callers. Phones behind a carrier's shared (CGNAT) IP, or
         // behind a VPN, share that IP with many other people and hit the limit constantly, while
